@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Payment Success - CraveBite</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Inter:wght@400;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    h1 {
+      font-family: 'Pacifico', cursive;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+  <!-- Navbar -->
+  <header class="bg-white shadow-md sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+      <h1 class="text-2xl font-bold pacifico text-yellow-500">CraveBite</h1>
+      <nav class="space-x-4 text-yellow-700 font-medium">
+        <a href="index.html" class="hover:text-yellow-500">Home</a>
+        <a href="menu.html" class="hover:text-yellow-500">Menu</a>
+        <a href="myorders.html" class="hover:text-yellow-500">My Orders</a>
+
+      </nav>
+    </div>
+  </header>
+
+  <!-- Success Content -->
+  <div class="max-w-2xl mx-auto bg-white p-8 mt-10 rounded-xl shadow-md text-center">
+    <div class="mb-6">
+      <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg class="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+      </div>
+      <h2 class="text-3xl font-bold text-green-600 mb-2">Payment Successful!</h2>
+      <p class="text-gray-600 mb-6">Your order has been placed and payment has been processed successfully.</p>
+    </div>
+
+    <div class="bg-gray-50 p-6 rounded-lg mb-6">
+      <h3 class="font-semibold mb-4">Order Details</h3>
+      <div class="text-left space-y-2">
+        <div class="flex justify-between">
+          <span>Order ID:</span>
+          <span id="orderId" class="font-mono">#ORD-12345</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Payment Method:</span>
+          <span id="paymentMethod">Credit Card</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Total Amount:</span>
+          <span id="totalAmount" class="font-bold">₹28.20</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Estimated Delivery:</span>
+          <span id="deliveryTime">30-45 minutes</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="space-y-4">
+      <p class="text-sm text-gray-600">
+        You will receive an email confirmation shortly with your order details and tracking information.
+      </p>
+      
+      <div class="flex flex-col sm:flex-row gap-4">
+        <a href="index.html" class="bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-3 px-6 rounded-full transition-all duration-300 hover:scale-105">
+          Continue Shopping
+        </a>
+        <a href="myorders.html" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 px-6 rounded-full transition-all duration-300 hover:scale-105">
+          My orders
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Get URL parameters to display order details
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentIntentId = urlParams.get('payment_intent');
+    const paymentIntentClientSecret = urlParams.get('payment_intent_client_secret');
+    const totalAmount = urlParams.get('total') || localStorage.getItem('lastOrderTotal') || '28.20';
+
+    // Update order details if available
+    if (paymentIntentId) {
+      document.getElementById('orderId').textContent = `#${paymentIntentId.slice(-8).toUpperCase()}`;
+    }
+
+    // Update total amount
+    document.getElementById('totalAmount').textContent = `₹${parseFloat(totalAmount).toFixed(2)}`;
+
+    // Auto-redirect after 10 seconds
+    setTimeout(() => {
+      window.location.href = 'index.html';
+    }, 10000);
+  </script>
+</body>
+</html> 
