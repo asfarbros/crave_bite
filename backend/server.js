@@ -1,3 +1,4 @@
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -12,6 +13,7 @@ const cartRoutes = require('./routes/cart');
 const orderRoutes = require('./routes/order.routes');
 const foodRoutes = require('./routes/food');
 const { protect } = require('./middleware/auth');
+
 
 const app = express();
 const PORT = process.env.PORT || 5000;

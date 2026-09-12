@@ -1,368 +1,330 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./RestaurantChatbot.css";
 
-const API_BASE = "http://localhost:5000";
-
 function RestaurantChatbot() {
-  const navigate = useNavigate();
+    const navigate = useNavigate();
 
-  const [isOpen, setIsOpen] = useState(false);
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
 
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      sender: "bot",
-      type: "text",
-      text:
-        "Hi! 👋 I'm your CraveBite assistant. Tell me what you'd like to eat."
-    }
-  ]);
-
-  const messagesEndRef = useRef(null);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: "smooth"
-    });
-  }, [messages, loading]);
-
-  const addBotMessage = (text) => {
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now() + Math.random(),
-        sender: "bot",
-        type: "text",
-        text
-      }
-    ]);
-  };
-
-  const searchMenu = async (query) => {
-    const response = await fetch(
-      `${API_BASE}/api/chatbot/search?q=${encodeURIComponent(query)}`
-    );
-
-    if (!response.ok) {
-      throw new Error("Menu search failed");
-    }
-
-    return response.json();
-  };
-
-  const addToCartAndCheckout = async (food) => {
-    const userString = localStorage.getItem("user");
-
-    if (!userString) {
-      addBotMessage(
-        "You need to log in before ordering. I'll take you to the login page."
-      );
-
-      setTimeout(() => {
-        navigate("/login");
-      }, 1000);
-
-      return;
-    }
-
-    let user;
-
-    try {
-      user = JSON.parse(userString);
-    } catch {
-      addBotMessage("Please log in again before ordering.");
-      navigate("/login");
-      return;
-    }
-
-    const userId = user?.id;
-
-    if (!userId) {
-      addBotMessage("I couldn't identify your account. Please log in again.");
-      navigate("/login");
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      const response = await fetch(`${API_BASE}/api/cart`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
+    const [messages, setMessages] = useState([
+        {
+            role: "model",
+            text: "Hi! 👋 I'm CraveBite AI. What would you like to eat today?",
         },
-        body: JSON.stringify({
-          name: food.name,
-          price: food.price,
-          quantity: 1,
-          userId
-        })
-      });
-
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.message || "Could not add item to cart");
-      }
-
-      addBotMessage(
-        `Added ${food.name} to your cart. 🛒 Taking you to checkout...`
-      );
-
-      setTimeout(() => {
-        navigate("/checkout");
-      }, 800);
-
-    } catch (error) {
-      console.error(error);
-
-      addBotMessage(
-        "Sorry, I couldn't add that item to your cart. Please try again."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSearch = async () => {
-    const query = message.trim();
-
-    if (!query || loading) return;
-
-    setMessage("");
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        sender: "user",
-        type: "text",
-        text: query
-      }
     ]);
 
-    try {
-      setLoading(true);
+    const [input, setInput] = useState("");
+    const [loading, setLoading] = useState(false);
 
-      const data = await searchMenu(query);
+    const getUser = () => {
+        try {
+            const user = localStorage.getItem("user");
 
-      if (!data.success) {
-        addBotMessage("Sorry, I couldn't search the menu.");
-        return;
-      }
+            if (!user) {
+                return null;
+            }
 
-      const exactMatches = data.exactMatches || [];
-      const relatedMatches = data.relatedMatches || [];
+            return JSON.parse(user);
+        } catch {
+            return null;
+        }
+    };
 
-      /*
-        EXACT MATCH
-      */
-      if (exactMatches.length > 0) {
-        addBotMessage("I found these items for you:");
+    const sendMessage = async () => {
+        const trimmedInput = input.trim();
 
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: Date.now() + Math.random(),
-            sender: "bot",
-            type: "foods",
-            foods: exactMatches
-          }
+        if (!trimmedInput || loading) {
+            return;
+        }
+
+        const user = getUser();
+
+        const userMessage = {
+            role: "user",
+            text: trimmedInput,
+        };
+
+        setMessages((previous) => [
+            ...previous,
+            userMessage,
         ]);
 
-        return;
-      }
+        setInput("");
+        setLoading(true);
 
-      /*
-        NO EXACT MATCH BUT RELATED ITEMS
-      */
-      if (relatedMatches.length > 0) {
-        addBotMessage(
-          `I couldn't find "${query}" exactly, but here are some related items from our menu:`
-        );
+        try {
+            const history = messages.map((message) => ({
+                role: message.role === "model" ? "model" : "user",
+                text: message.text,
+            }));
 
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: Date.now() + Math.random(),
-            sender: "bot",
-            type: "foods",
-            foods: relatedMatches
-          }
-        ]);
-
-        return;
-      }
-
-      /*
-        NOTHING FOUND
-      */
-      addBotMessage(
-        `Sorry, I couldn't find anything related to "${query}" in our current menu. Try asking for something like a burger, pizza, pasta, or biriyani.`
-      );
-
-    } catch (error) {
-      console.error("Chatbot error:", error);
-
-      addBotMessage(
-        "Sorry! I'm having trouble connecting to the menu right now."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleKeyDown = (event) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      handleSearch();
-    }
-  };
-
-  return (
-    <>
-      {/* Floating chatbot button */}
-      {!isOpen && (
-        <button
-          className="chatbot-floating-button"
-          onClick={() => setIsOpen(true)}
-          aria-label="Open CraveBite chatbot"
-        >
-          💬
-        </button>
-      )}
-
-      {/* Chat window */}
-      {isOpen && (
-        <div className="chatbot-container">
-
-          <div className="chatbot-header">
-            <div>
-              <div className="chatbot-title">
-                🍽️ CraveBite Assistant
-              </div>
-
-              <div className="chatbot-status">
-                ● Online
-              </div>
-            </div>
-
-            <button
-              className="chatbot-close"
-              onClick={() => setIsOpen(false)}
-            >
-              ×
-            </button>
-          </div>
-
-          <div className="chatbot-messages">
-
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={
-                  msg.sender === "user"
-                    ? "chat-message user-message"
-                    : "chat-message bot-message"
+            const response = await fetch(
+                "http://localhost:5000/api/chatbot",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        message: trimmedInput,
+                        userId: user?.id || user?._id || null,
+                        history,
+                    }),
                 }
-              >
-                {msg.type === "text" && (
-                  <div className="message-bubble">
-                    {msg.text}
-                  </div>
-                )}
+            );
 
-                {msg.type === "foods" && (
-                  <div className="food-results">
+            const data = await response.json();
 
-                    {msg.foods.map((food) => (
-                      <div
-                        className="chat-food-card"
-                        key={food._id}
-                      >
+            if (!response.ok || !data.success) {
+                throw new Error(
+                    data.message || "Chatbot request failed"
+                );
+            }
 
-                        {food.imageUrl && (
-                          <img
-                            src={food.imageUrl}
-                            alt={food.name}
-                            className="chat-food-image"
-                          />
-                        )}
+            setMessages((previous) => [
+                ...previous,
+                {
+                    role: "model",
+                    text: data.reply,
+                    menuResults: data.menuResults || [],
+                    addedItem: data.addedItem || null,
+                    checkoutReady: data.checkoutReady || false,
+                },
+            ]);
+        } catch (error) {
+            console.error(error);
 
-                        <div className="chat-food-info">
+            setMessages((previous) => [
+                ...previous,
+                {
+                    role: "model",
+                    text:
+                        "Sorry 😔 I couldn't connect to the CraveBite AI service. Please try again.",
+                },
+            ]);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-                          <h4>{food.name}</h4>
+    const addItemToCart = async (food) => {
+        const user = getUser();
 
-                          <p className="chat-food-description">
-                            {food.description}
-                          </p>
+        if (!user) {
+            setMessages((previous) => [
+                ...previous,
+                {
+                    role: "model",
+                    text: "Please log in first so I can add the item to your cart.",
+                },
+            ]);
 
-                          <div className="chat-food-bottom">
+            navigate("/login");
+            return;
+        }
 
-                            <strong>
-                              ₹{food.price}
-                            </strong>
+        setLoading(true);
 
-                            <button
-                              onClick={() =>
-                                addToCartAndCheckout(food)
-                              }
-                              disabled={loading}
-                            >
-                              Add & Checkout
-                            </button>
+        try {
+            const response = await fetch(
+                "http://localhost:5000/api/chatbot",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        message: `Add ${food.name} to my cart`,
+                        userId: user.id || user._id,
+                        history: messages.map((message) => ({
+                            role:
+                                message.role === "model"
+                                    ? "model"
+                                    : "user",
+                            text: message.text,
+                        })),
+                    }),
+                }
+            );
 
-                          </div>
+            const data = await response.json();
 
+            if (!response.ok || !data.success) {
+                throw new Error(
+                    data.message || "Could not add item"
+                );
+            }
+
+            setMessages((previous) => [
+                ...previous,
+                {
+                    role: "model",
+                    text: `${food.name} has been added to your cart! 🛒`,
+                    addedItem: data.addedItem,
+                    checkoutReady: true,
+                },
+            ]);
+        } catch (error) {
+            console.error(error);
+
+            setMessages((previous) => [
+                ...previous,
+                {
+                    role: "model",
+                    text:
+                        "I couldn't add that item to your cart. Please try again.",
+                },
+            ]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const goToCheckout = () => {
+        navigate("/checkout");
+    };
+
+    const handleKeyDown = (event) => {
+        if (event.key === "Enter") {
+            sendMessage();
+        }
+    };
+
+    return (
+        <>
+            <button
+                className="chatbot-floating-button"
+                onClick={() => setIsOpen(!isOpen)}
+                aria-label="Open CraveBite AI"
+            >
+                🤖
+            </button>
+
+            {isOpen && (
+                <div className="restaurant-chatbot">
+                    <div className="chatbot-header">
+                        <div>
+                            <strong>CraveBite AI</strong>
+                            <span>Online • Restaurant Assistant</span>
                         </div>
 
-                      </div>
-                    ))}
+                        <button
+                            className="chatbot-close"
+                            onClick={() => setIsOpen(false)}
+                        >
+                            ×
+                        </button>
+                    </div>
 
-                  </div>
-                )}
-              </div>
-            ))}
+                    <div className="chatbot-messages">
+                        {messages.map((message, index) => (
+                            <div
+                                key={index}
+                                className={`chat-message ${
+                                    message.role === "user"
+                                        ? "user-message"
+                                        : "bot-message"
+                                }`}
+                            >
+                                <div className="message-text">
+                                    {message.text}
+                                </div>
 
-            {loading && (
-              <div className="chat-message bot-message">
-                <div className="message-bubble typing">
-                  Searching the menu...
+                                {message.menuResults?.length > 0 && (
+                                    <div className="chat-food-results">
+                                        {message.menuResults.map(
+                                            (food) => (
+                                                <div
+                                                    className="chat-food-card"
+                                                    key={food.id}
+                                                >
+                                                    {food.imageUrl && (
+                                                        <img
+                                                            src={
+                                                                food.imageUrl
+                                                            }
+                                                            alt={
+                                                                food.name
+                                                            }
+                                                        />
+                                                    )}
+
+                                                    <div className="chat-food-info">
+                                                        <h4>
+                                                            {food.name}
+                                                        </h4>
+
+                                                        <p>
+                                                            {
+                                                                food.description
+                                                            }
+                                                        </p>
+
+                                                        <strong>
+                                                            ₹
+                                                            {
+                                                                food.price
+                                                            }
+                                                        </strong>
+
+                                                        <button
+                                                            onClick={() =>
+                                                                addItemToCart(
+                                                                    food
+                                                                )
+                                                            }
+                                                        >
+                                                            Add to Cart
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )
+                                        )}
+                                    </div>
+                                )}
+
+                                {message.checkoutReady && (
+                                    <button
+                                        className="checkout-chat-button"
+                                        onClick={goToCheckout}
+                                    >
+                                        Proceed to Payment →
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+
+                        {loading && (
+                            <div className="chat-message bot-message">
+                                Thinking... 🤔
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="chatbot-input-area">
+                        <input
+                            type="text"
+                            placeholder="Ask for food..."
+                            value={input}
+                            onChange={(event) =>
+                                setInput(event.target.value)
+                            }
+                            onKeyDown={handleKeyDown}
+                            disabled={loading}
+                        />
+
+                        <button
+                            onClick={sendMessage}
+                            disabled={loading}
+                        >
+                            ➤
+                        </button>
+                    </div>
                 </div>
-              </div>
             )}
-
-            <div ref={messagesEndRef} />
-
-          </div>
-
-          <div className="chatbot-input-area">
-
-            <input
-              type="text"
-              value={message}
-              placeholder="Ask for a food..."
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={handleKeyDown}
-              disabled={loading}
-            />
-
-            <button
-              onClick={handleSearch}
-              disabled={loading || !message.trim()}
-            >
-              ➤
-            </button>
-
-          </div>
-
-        </div>
-      )}
-    </>
-  );
+        </>
+    );
 }
 
 export default RestaurantChatbot;
