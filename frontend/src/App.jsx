@@ -12,11 +12,13 @@ import Signup from "./pages/Signup";
 import MyOrders from "./pages/MyOrders";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import RestaurantChatbot from "./components/RestaurantChatbot";
 
 function App() {
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
+
       <main className="flex-grow">
         <Routes>
           <Route path="/" element={<Home />} />
@@ -31,6 +33,9 @@ function App() {
           <Route path="/myorders" element={<MyOrders />} />
         </Routes>
       </main>
+
+      <RestaurantChatbot />
+
       <Footer />
     </div>
   );

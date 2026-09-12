@@ -4,7 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
-
+const chatbotRoutes = require("./routes/chatbot");
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
 const paymentRoutes = require('./routes/payment');
@@ -53,6 +53,7 @@ app.use('/api/payment', paymentRoutes);
 app.use('/api/cart', cartRoutes); 
 app.use('/api/order', orderRoutes);
 app.use('/api/foods', foodRoutes);
+app.use("/api/chatbot", chatbotRoutes);
 
 
 // Health check endpoint
