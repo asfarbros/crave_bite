@@ -26,6 +26,7 @@ app.use(cors({
     'http://127.0.0.1:5174',       // React dev server (alternative port)
     'http://localhost:3000',
     'http://127.0.0.1:3000',
+    'https://crave-bite-seven.vercel.app',
     'file://',                     // HTML files
     'null'                         // HTML files (alternative)
   ],

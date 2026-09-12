@@ -1,10 +1,11 @@
-<!-- myorders.html -->
+﻿<!-- myorders.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <title>My Orders</title>
   <script src="https://cdn.tailwindcss.com"></script>
+<script src="js/config.js"></script>
 </head>
 <body class="bg-[#fefae0] min-h-screen text-gray-800">
   <header class="bg-white shadow-md p-4">
@@ -27,7 +28,7 @@
       }
 
       try {
-        const res = await fetch('http://localhost:5000/api/order/myorders', {
+        const res = await fetch(API_URL + '/api/order/myorders', {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
@@ -48,9 +49,9 @@
           div.innerHTML = `
             <p class="text-lg font-bold text-yellow-800">Order Date: ${new Date(order.createdAt).toLocaleString()}</p>
             <ul class="mt-2 space-y-1 text-gray-700">
-              ${order.items.map(item => `<li>${item.name} - ₹${item.price} x ${item.quantity}</li>`).join('')}
+              ${order.items.map(item => `<li>${item.name} - â‚¹${item.price} x ${item.quantity}</li>`).join('')}
             </ul>
-            <p class="mt-2 font-semibold text-green-700">Total: ₹${total}</p>
+            <p class="mt-2 font-semibold text-green-700">Total: â‚¹${total}</p>
           `;
 
           container.appendChild(div);
@@ -65,3 +66,4 @@
   </script>
 </body>
 </html>
+

@@ -1,10 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Your Cart</title>
   <script src="https://cdn.tailwindcss.com"></script>
+<script src="js/config.js"></script>
 </head>
 <body class="bg-[#fefae0] text-[#333] min-h-screen flex flex-col">
 
@@ -51,7 +52,7 @@
         const user = JSON.parse(localStorage.getItem('user'));
         const userId = user?.id;
 
-        const res = await fetch(`http://localhost:5000/api/cart?userId=${userId}`);
+        const res = await fetch(`/api/cart?userId=${userId}`);
         const data = await res.json();
 
         if (!data.success || !data.items.length) {
@@ -73,7 +74,7 @@
           info.innerHTML = `
             <p class="text-lg font-semibold text-yellow-800">${item.name}</p>
             <p class="text-gray-600">
-              ₹${item.price} x 
+              â‚¹${item.price} x 
               <span id="qty-${item._id}">${item.quantity}</span>
             </p>
           `;
@@ -99,7 +100,7 @@
           cartItemsDiv.appendChild(itemDiv);
         });
 
-        totalAmountDiv.innerText = `Total: ₹${total}`;
+        totalAmountDiv.innerText = `Total: â‚¹${total}`;
         checkoutLink.href = `checkout.html?total=${total}`;
       } catch (error) {
         console.error('Error fetching cart:', error);
@@ -110,7 +111,7 @@
     async function updateQuantity(itemId, newQty) {
       if (newQty <= 0) return; // prevent going to 0 or negative
 
-      const res = await fetch(`http://localhost:5000/api/cart/${itemId}`, {
+      const res = await fetch(`/api/cart/${itemId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quantity: newQty })
@@ -127,3 +128,4 @@
   </script>
 </body>
 </html>
+

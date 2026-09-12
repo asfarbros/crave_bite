@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -16,6 +16,7 @@
       font-family: 'Pacifico', cursive;
     }
   </style>
+<script src="js/config.js"></script>
 </head>
 <body>
 
@@ -47,7 +48,7 @@
   <script>
     async function loadMenu() {
       try {
-        const response = await fetch('http://localhost:5000/api/foods');
+        const response = await fetch(API_URL + '/api/foods');
         const data = await response.json();
         const menuGrid = document.getElementById('menu-grid');
         
@@ -65,7 +66,7 @@
               <h2 class="text-2xl font-bold text-yellow-300 mb-2">${food.name}</h2>
               <p class="text-sm text-gray-200 flex-grow">${food.description || ''}</p>
               <div class="flex justify-between items-center mt-4">
-                <span class="text-yellow-400 font-semibold text-lg">₹${food.price}</span>
+                <span class="text-yellow-400 font-semibold text-lg">â‚¹${food.price}</span>
                 <button onclick="addToCart('${food.name}', ${food.price})" class="bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-2 px-4 rounded-full shadow transition hover:scale-105">
                   Add to Cart
                 </button>
@@ -93,7 +94,7 @@
         const userId = user?.id;
         console.log("Sending userId:", userId); 
 
-        fetch('http://localhost:5000/api/cart', {
+        fetch(API_URL + '/api/cart', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, price, quantity: 1, userId })  // Add userId
@@ -137,3 +138,4 @@
   </script>
 </body>
 </html>
+

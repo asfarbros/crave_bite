@@ -1,4 +1,4 @@
-<!-- checkout.html -->
+﻿<!-- checkout.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -86,6 +86,7 @@
       }
     }
   </style>
+<script src="js/config.js"></script>
 </head>
 <body class="bg-gray-100 text-gray-800">
 
@@ -124,15 +125,15 @@
         <h3 class="font-semibold mb-2">Order Summary</h3>
                  <div class="flex justify-between mb-2">
            <span>Subtotal:</span>
-           <span id="subtotal">₹0.00</span>
+           <span id="subtotal">â‚¹0.00</span>
          </div>
          <div class="flex justify-between mb-2">
            <span>Tax (8.5%):</span>
-           <span id="tax">₹0.00</span>
+           <span id="tax">â‚¹0.00</span>
          </div>
          <div class="flex justify-between font-bold text-lg">
            <span>Total:</span>
-           <span id="total">₹0.00</span>
+           <span id="total">â‚¹0.00</span>
          </div>
       </div>
 
@@ -168,7 +169,7 @@
       </button>
     </form>
     <div id="successMessage" class="text-green-600 font-semibold mt-6 hidden text-center">
-      🎉 Order placed successfully! Check your email for confirmation.
+      ðŸŽ‰ Order placed successfully! Check your email for confirmation.
     </div>
     <div id="errorMessage" class="text-red-600 font-semibold mt-6 hidden text-center">
     </div>
@@ -199,9 +200,9 @@
 
          // Initialize order summary
      function initializeOrderSummary() {
-       document.getElementById('subtotal').textContent = `₹${orderData.subtotal.toFixed(2)}`;
-       document.getElementById('tax').textContent = `₹${orderData.tax.toFixed(2)}`;
-       document.getElementById('total').textContent = `₹${orderData.total.toFixed(2)}`;
+       document.getElementById('subtotal').textContent = `â‚¹${orderData.subtotal.toFixed(2)}`;
+       document.getElementById('tax').textContent = `â‚¹${orderData.tax.toFixed(2)}`;
+       document.getElementById('total').textContent = `â‚¹${orderData.total.toFixed(2)}`;
      }
 
     // Handle payment method selection
@@ -235,7 +236,7 @@
         paymentElementDiv.style.display = 'none';
         
         // Create payment intent
-        const response = await fetch('http://localhost:5000/api/payment/create-payment-intent', {
+        const response = await fetch(API_URL + '/api/payment/create-payment-intent', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -299,7 +300,7 @@
 
     try {
       // Send order request to backend
-      const response = await fetch("http://localhost:5000/api/order/place", {
+      const response = await fetch(API_URL + "/api/order/place", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -423,8 +424,8 @@ document.getElementById('submit-button').addEventListener('click', async (e) => 
   }
 
   try {
-    // 🔁 CHANGED: cart ➜ order
-    const response = await fetch('http://localhost:5000/api/order/place' ,{
+    // ðŸ” CHANGED: cart âžœ order
+    const response = await fetch(API_URL + '/api/order/place' ,{
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -436,7 +437,7 @@ document.getElementById('submit-button').addEventListener('click', async (e) => 
 
     if (data.success) {
       successMessage.classList.remove('hidden');
-      successMessage.textContent = '🎉 Order placed successfully!';
+      successMessage.textContent = 'ðŸŽ‰ Order placed successfully!';
       
       // Redirect after short delay
       setTimeout(() => {
@@ -461,3 +462,4 @@ document.getElementById('submit-button').addEventListener('click', async (e) => 
 
 </body>
 </html>
+
