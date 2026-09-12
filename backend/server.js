@@ -13,7 +13,8 @@ const cartRoutes = require('./routes/cart');
 const orderRoutes = require('./routes/order.routes');
 const foodRoutes = require('./routes/food');
 const { protect } = require('./middleware/auth');
-
+const tasteProfileRoutes = require("./routes/tasteProfile");
+const recommendationRoutes = require("./routes/recommendations");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -56,7 +57,9 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/order', orderRoutes);
 app.use('/api/foods', foodRoutes);
 app.use("/api/chatbot", chatbotRoutes);
-
+app.use('/api/foods', foodRoutes);
+app.use("/api/taste-profile", tasteProfileRoutes);
+app.use("/api/recommendations", recommendationRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

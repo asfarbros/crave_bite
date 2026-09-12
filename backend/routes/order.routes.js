@@ -1,4 +1,8 @@
 const express = require('express');
+const Food = require("../models/Food");
+const {
+  updateTasteProfile
+} = require("../services/recommendationEngine");
 const router = express.Router();
 const CartItem = require('../models/CartItem');
 const Order = require('../models/Order');
@@ -24,6 +28,23 @@ router.post('/place', protect, async (req, res) => {
     });
 
     await newOrder.save();
+    // -----------------------------------------------------
+// UPDATE AI TASTE PROFILE FROM ORDER
+// -----------------------------------------------------
+
+for (const cartItem of cartItems) {
+  const food = await Food.findOne({
+    name: cartItem.name
+  });
+
+  if (food) {
+    await updateTasteProfile(
+      userId,
+      food,
+      "order"
+    );
+  }
+}
     await CartItem.deleteMany({ userId });
 
     res.status(201).json({ success: true, message: "Order placed successfully." });

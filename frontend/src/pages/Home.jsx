@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import Recommendations from "../components/Recommendations";
 import { Link } from "react-router-dom";
 
 function Home() {
@@ -90,6 +91,8 @@ function Home() {
         </div>
       </section>
 
+      <Recommendations />
+      
       {/* About Section */}
       <section id="about" className="py-20 px-6 bg-white">
         <div className="max-w-4xl mx-auto text-center">
