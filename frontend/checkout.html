@@ -424,7 +424,7 @@ document.getElementById('submit-button').addEventListener('click', async (e) => 
   }
 
   try {
-    // ðŸ” CHANGED: cart âžœ order
+
     const response = await fetch(API_URL + '/api/order/place' ,{
       method: 'POST',
       headers: {
@@ -437,7 +437,7 @@ document.getElementById('submit-button').addEventListener('click', async (e) => 
 
     if (data.success) {
       successMessage.classList.remove('hidden');
-      successMessage.textContent = 'ðŸŽ‰ Order placed successfully!';
+      successMessage.textContent = 'Order placed successfully!';
       
       // Redirect after short delay
       setTimeout(() => {
