@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const CartItem = require('../models/CartItem');
 const Order = require('../models/Order');
-const { protect } = require('../middleware/auth');
+const { protect, authorize } = require('../middleware/auth');
 
 // POST /api/order/place - Create an order from the user's cart
 router.post('/place', protect, async (req, res) => {
@@ -42,6 +42,17 @@ router.get('/myorders', protect, async (req, res) => {
   } catch (error) {
     console.error("Error fetching orders:", error);
     res.status(500).json({ success: false, message: "Failed to fetch orders." });
+  }
+});
+
+// GET /api/order/all - Get all orders (Admin only)
+router.get('/all', protect, authorize('admin'), async (req, res) => {
+  try {
+    const orders = await Order.find().sort({ createdAt: -1 });
+    res.json({ success: true, orders });
+  } catch (error) {
+    console.error("Error fetching all orders:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch all orders." });
   }
 });
 

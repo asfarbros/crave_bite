@@ -4,4 +4,4 @@ node_modules/
 
 frontend/images
 
-nodeSetup
+backend/createAdmin.js
