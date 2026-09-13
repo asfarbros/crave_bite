@@ -3,7 +3,6 @@ const router = express.Router();
 const Food = require('../models/Food');
 const { protect, authorize } = require('../middleware/auth');
 const cloudinary = require('cloudinary').v2;
-const redis = require('../config/redis');
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -11,56 +10,23 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-const CACHE_TTL_SECONDS = 60;
-
-async function invalidateFoodCache() {
-    if (!redis) return;
-    try {
-        await redis.del('foods:all', 'foods:public');
-    } catch (error) {
-        console.error('Redis invalidation error (non-fatal):', error.message);
-    }
-}
-
 // GET all foods
 router.get('/', async (req, res) => {
-    const isAdminView = req.query.all === 'true';
-    const cacheKey = isAdminView ? 'foods:all' : 'foods:public';
-
-    if (redis) {
-        try {
-            const cached = await redis.get(cacheKey);
-            if (cached) {
-                res.set('X-Cache', 'HIT');
-                // @upstash/redis auto-deserializes JSON values it stored, so `cached` is already an object.
-                return res.status(200).json(cached);
-            }
-        } catch (error) {
-            console.error('Redis read error (falling back to DB):', error.message);
-        }
-    }
-
     try {
         // Admins can see all, users see only available
-        const query = isAdminView ? {} : { isAvailable: true };
+        let query = { isAvailable: true };
+
+        // If query param 'all' is passed and user is admin (we can check token if provided)
+        if (req.query.all === 'true') {
+            query = {}; // fetch all
+        }
 
         const foods = await Food.find(query);
-        const payload = {
+        res.status(200).json({
             success: true,
             count: foods.length,
             data: foods
-        };
-
-        res.set('X-Cache', 'MISS');
-        res.status(200).json(payload);
-
-        if (redis) {
-            try {
-                await redis.set(cacheKey, payload, { ex: CACHE_TTL_SECONDS });
-            } catch (error) {
-                console.error('Redis write error (non-fatal):', error.message);
-            }
-        }
+        });
     } catch (error) {
         console.error('Error fetching foods:', error);
         res.status(500).json({
@@ -94,7 +60,6 @@ router.post('/', protect, authorize('admin'), async (req, res) => {
         });
 
         await newFood.save();
-        await invalidateFoodCache();
         res.status(201).json({ success: true, data: newFood });
     } catch (error) {
         console.error('Error adding food:', error);
@@ -127,7 +92,6 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
         }
 
         food = await Food.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
-        await invalidateFoodCache();
         res.status(200).json({ success: true, data: food });
     } catch (error) {
         console.error('Error updating food:', error);
@@ -148,7 +112,6 @@ router.delete('/:id', protect, authorize('admin'), async (req, res) => {
         }
 
         await food.deleteOne();
-        await invalidateFoodCache();
         res.status(200).json({ success: true, message: 'Food item deleted successfully' });
     } catch (error) {
         console.error('Error deleting food:', error);
