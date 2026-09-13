@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 
+const CartItem = require('../models/CartItem');
+const { protect } = require('../middleware/auth');
+
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 
 if (!stripeSecretKey) {
@@ -9,15 +12,20 @@ if (!stripeSecretKey) {
 
 const stripe = require('stripe')(stripeSecretKey);
 
-// Create payment intent
+router.use(protect);
+
+// Create payment intent — amount is derived from the user's own cart, never trusted from the client
 router.post('/create-payment-intent', async (req, res) => {
   try {
-    const { amount, currency = 'usd' } = req.body;
+    const { currency = 'usd' } = req.body;
+
+    const cartItems = await CartItem.find({ userId: req.user.id });
+    const amount = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
     if (!amount || amount <= 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Invalid amount' 
+      return res.status(400).json({
+        success: false,
+        message: 'Cart is empty or invalid'
       });
     }
 
@@ -38,10 +46,10 @@ router.post('/create-payment-intent', async (req, res) => {
     });
   } catch (error) {
     console.error('Payment intent creation error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Failed to create payment intent',
-      error: error.message 
+      error: error.message
     });
   }
 });
@@ -52,9 +60,9 @@ router.post('/confirm-payment', async (req, res) => {
     const { paymentIntentId } = req.body;
 
     if (!paymentIntentId) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Payment intent ID is required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Payment intent ID is required'
       });
     }
 
@@ -75,12 +83,12 @@ router.post('/confirm-payment', async (req, res) => {
     }
   } catch (error) {
     console.error('Payment confirmation error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Failed to confirm payment',
-      error: error.message 
+      error: error.message
     });
   }
 });
 
-module.exports = router; 
+module.exports = router;

@@ -4,10 +4,10 @@ const Food = require('../models/Food');
 const { protect, authorize } = require('../middleware/auth');
 const cloudinary = require('cloudinary').v2;
 
-cloudinary.config({ 
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME, 
-  api_key: process.env.CLOUDINARY_API_KEY, 
-  api_secret: process.env.CLOUDINARY_API_SECRET 
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
 // GET all foods
@@ -15,7 +15,7 @@ router.get('/', async (req, res) => {
     try {
         // Admins can see all, users see only available
         let query = { isAvailable: true };
-        
+
         // If query param 'all' is passed and user is admin (we can check token if provided)
         if (req.query.all === 'true') {
             query = {}; // fetch all
@@ -76,7 +76,7 @@ router.put('/:id', protect, authorize('admin'), async (req, res) => {
         }
 
         const { name, description, price, category, imageBase64, isAvailable } = req.body;
-        
+
         const updateData = { name, description, price, category };
         if (isAvailable !== undefined) updateData.isAvailable = isAvailable;
 

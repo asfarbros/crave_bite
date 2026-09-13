@@ -158,28 +158,6 @@ router.delete('/account', async (req, res) => {
   }
 });
 
-// @route   GET /api/user/orders
-// @desc    Get user orders (placeholder for future implementation)
-// @access  Private
-router.get('/orders', async (req, res) => {
-  try {
-    // This would be implemented when you add order functionality
-    res.json({
-      success: true,
-      message: 'Orders feature coming soon',
-      data: {
-        orders: []
-      }
-    });
-  } catch (error) {
-    console.error('Get orders error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error while fetching orders'
-    });
-  }
-});
-
 // Admin routes
 // @route   GET /api/user/admin/users
 // @desc    Get all users (admin only)

@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 
 import Home from "./pages/Home";
 import Menu from "./pages/Menu";
@@ -10,7 +10,11 @@ import Booking from "./pages/Booking";
 import Events from "./pages/Events";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import MyOrders from "./pages/MyOrders";
+import AdminLogin from "./pages/AdminLogin";
+import AdminDashboard from "./pages/AdminDashboard";
 
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -19,10 +23,13 @@ import TasteProfile from "./components/TasteProfile";
 import RestaurantChatbot from "./components/RestaurantChatbot";
 
 function App() {
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith("/admin");
+
   return (
     <div className="flex flex-col min-h-screen">
 
-      <Navbar />
+      {!isAdminRoute && <Navbar />}
 
       <main className="flex-grow">
 
@@ -74,19 +81,39 @@ function App() {
           />
 
           <Route
+            path="/forgot-password"
+            element={<ForgotPassword />}
+          />
+
+          <Route
+            path="/reset-password/:token"
+            element={<ResetPassword />}
+          />
+
+          <Route
             path="/myorders"
             element={<MyOrders />}
+          />
+
+          <Route
+            path="/admin-login"
+            element={<AdminLogin />}
+          />
+
+          <Route
+            path="/admin"
+            element={<AdminDashboard />}
           />
 
         </Routes>
 
       </main>
 
-      <Footer />
+      {!isAdminRoute && <Footer />}
 
       {/* Floating AI features */}
-      <TasteProfile />
-      <RestaurantChatbot />
+      {!isAdminRoute && <TasteProfile />}
+      {!isAdminRoute && <RestaurantChatbot />}
 
     </div>
   );

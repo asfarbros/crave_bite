@@ -1,96 +1,35 @@
-# Stripe Payment Integration Setup
+# Stripe Payment Integration
 
-## Overview
-This restaurant app now includes Stripe payment processing for credit/debit card payments. When users select "Credit/Debit Card" as their payment method, they will be redirected to Stripe's secure payment page.
+CraveBite supports Stripe card payments alongside Cash on Delivery at checkout.
 
-## Features
-- ✅ Secure credit/debit card processing via Stripe
-- ✅ Cash on delivery option
-- ✅ Real-time payment validation
-- ✅ Order summary with tax calculation
-- ✅ Success page after payment completion
-- ✅ Error handling and user feedback
+## Configuration
 
-## Setup Instructions
+- Backend: set `STRIPE_SECRET_KEY` in `backend/.env` (see `backend/.env.example`).
+- Frontend: set `VITE_STRIPE_PUBLISHABLE_KEY` in `frontend/.env` (see `frontend/.env.example`).
 
-### 1. Environment Variables
-Create a `.env` file in the root directory with the following variables:
+Never commit real secret keys. The Stripe *publishable* key is safe to expose client-side; the *secret* key must only ever live in `backend/.env`.
 
-```env
-# Stripe Configuration
-STRIPE_PUBLISHABLE_KEY=pk_349847508994559872345897
-STRIPE_SECRET_KEY=sk_238509182509870587205
-```
+## How it works
 
-### 2. Dependencies
-The following packages have been installed:
-- Backend: `stripe`
-- Frontend: `@stripe/stripe-js`
+1. The user adds items to their cart and proceeds to `/checkout`.
+2. Selecting "Credit/Debit Card" calls `POST /api/payment/create-payment-intent` (auth required). The backend computes the charge amount from the user's own cart server-side — it never trusts a client-supplied amount.
+3. Stripe Elements (`@stripe/react-stripe-js`) collects card details and confirms the payment intent.
+4. On success, the frontend calls `POST /api/order/place` to convert the cart into an order, then redirects to `/success`.
+5. Selecting "Cash on Delivery" skips Stripe and calls `POST /api/order/place` directly.
 
-### 3. Running the Application
-
-1. Start the backend server:
-   ```bash
-   npm start
-   ```
-
-2. Open the checkout page in your browser:
-   ```
-   http://localhost:5000/client/checkout.html
-   ```
-
-## How It Works
-
-### Payment Flow
-1. User adds items to cart and proceeds to checkout
-2. On checkout page, user selects payment method:
-   - **Credit/Debit Card**: Redirects to Stripe payment page
-   - **Cash on Delivery**: Processes order locally
-3. For card payments:
-   - Backend creates a payment intent
-   - Frontend loads Stripe Elements
-   - User enters card details on Stripe's secure page
-   - Payment is processed and user is redirected to success page
-
-### API Endpoints
-- `POST /api/payment/create-payment-intent` - Creates a new payment intent
-- `POST /api/payment/confirm-payment` - Confirms payment completion
-
-### Files Modified/Created
-- `routes/payment.js` - Payment API endpoints
-- `client/checkout.html` - Updated with Stripe integration
-- `client/success.html` - New success page
-- `client/cart.html` - Updated to pass total to checkout
-- `server.js` - Added payment routes
+Relevant files: `backend/routes/payment.js`, `frontend/src/pages/Checkout.jsx`, `frontend/src/pages/Success.jsx`.
 
 ## Testing
 
-### Test Card Numbers
-Use these test card numbers for testing:
-- **Success**: `4242 4242 4242 4242`
-- **Decline**: `4000 0000 0000 0002`
-- **Requires Authentication**: `4000 0025 0000 3155`
+Use Stripe's test card numbers in test mode:
 
-### Test CVC and Expiry
-- CVC: Any 3 digits (e.g., `123`)
-- Expiry: Any future date (e.g., `12/25`)
+- Success: `4242 4242 4242 4242`
+- Decline: `4000 0000 0000 0002`
+- Requires authentication: `4000 0025 0000 3155`
+- CVC: any 3 digits, Expiry: any future date
 
-## Security Notes
-- Never expose your Stripe secret key in client-side code
-- Always use HTTPS in production
-- Implement proper error handling and validation
-- Consider adding webhook endpoints for payment status updates
+## Security notes
 
-## Customization
-- Modify tax rate in `checkout.html` (currently 8.5%)
-- Update success page styling and content
-- Add order confirmation emails
-- Implement inventory management
-- Add payment webhooks for real-time updates
-
-## Troubleshooting
-- Ensure server is running on port 5000
-- Check browser console for JavaScript errors
-- Verify Stripe keys are correct
-- Make sure CORS is properly configured
-- Check network tab for API call failures 
+- The Stripe secret key must never appear in frontend code or be committed to the repo.
+- Always use HTTPS in production.
+- `create-payment-intent` and `confirm-payment` both require a valid auth token (`backend/routes/payment.js`).

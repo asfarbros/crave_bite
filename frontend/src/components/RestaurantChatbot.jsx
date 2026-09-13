@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./RestaurantChatbot.css";
+import { API_URL } from "../config";
 
 function RestaurantChatbot() {
     const navigate = useNavigate();
@@ -60,7 +61,7 @@ function RestaurantChatbot() {
             }));
 
             const response = await fetch(
-                "http://localhost:5000/api/chatbot",
+                `${API_URL}/api/chatbot`,
                 {
                     method: "POST",
                     headers: {
@@ -128,7 +129,7 @@ function RestaurantChatbot() {
 
         try {
             const response = await fetch(
-                "http://localhost:5000/api/chatbot",
+                `${API_URL}/api/chatbot`,
                 {
                     method: "POST",
                     headers: {

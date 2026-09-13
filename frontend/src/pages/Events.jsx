@@ -1,5 +1,38 @@
 import React, { useState, useEffect } from "react";
 
+const HALLS = [
+  {
+    id: "A",
+    name: "Hall A",
+    price: 5000,
+    capacity: 50,
+    gradient: "from-pink-400 to-rose-500",
+    icon: "🎂",
+    features: ["Intimate atmosphere", "Stage for performances", "Catering included"]
+  },
+  {
+    id: "B",
+    name: "Hall B",
+    price: 8000,
+    capacity: 100,
+    gradient: "from-indigo-400 to-purple-500",
+    icon: "🎊",
+    features: ["Professional lighting", "Audio system included", "Catering included"]
+  },
+  {
+    id: "C",
+    name: "Hall C",
+    price: 12000,
+    capacity: 150,
+    gradient: "from-amber-400 to-orange-500",
+    icon: "🥂",
+    features: ["Premium amenities", "Full AV system", "Catering included"]
+  }
+];
+
+const TIME_SLOTS = ["10:00 AM", "12:00 PM", "3:00 PM", "6:00 PM", "8:00 PM"];
+const EVENT_TYPES = ["Birthday Party", "Corporate Event", "Wedding Reception", "Anniversary", "Other"];
+
 function Events() {
   const [selectedHall, setSelectedHall] = useState(null);
   const [showModal, setShowModal] = useState(false);
@@ -14,30 +47,20 @@ function Events() {
     requests: ""
   });
 
-  const halls = [
-    { id: "A", name: "Hall A", price: 5000, capacity: 50, booked: false, features: ["Small gatherings", "Intimate atmosphere", "Stage for performances", "Catering included"] },
-    { id: "B", name: "Hall B", price: 8000, capacity: 100, booked: false, features: ["Medium-sized events", "Professional lighting", "Audio system included", "Catering included"] },
-    { id: "C", name: "Hall C", price: 12000, capacity: 150, booked: false, features: ["Large celebrations", "Premium amenities", "Full AV system", "Catering included"] }
-  ];
-
   useEffect(() => {
-    // Set minimum date to today
     const today = new Date().toISOString().split("T")[0];
     setFormData((prev) => ({ ...prev, date: today }));
   }, []);
-
-  const handleHallClick = (hall) => {
-    if (hall.booked) return;
-    setSelectedHall(hall);
-  };
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const readyToConfirm = selectedHall && formData.date && formData.time && formData.eventType && formData.guestCount && formData.name && formData.phone && formData.email;
+
   const handleBookingSubmit = (e) => {
     e.preventDefault();
-    if (!selectedHall) return;
+    if (!readyToConfirm) return;
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
@@ -51,165 +74,149 @@ function Events() {
   const closeModal = () => {
     setShowModal(false);
     setSelectedHall(null);
-    setFormData({ ...formData, time: "", eventType: "", guestCount: "", name: "", phone: "", email: "", requests: "" });
+    setFormData((prev) => ({ ...prev, time: "", eventType: "", guestCount: "", name: "", phone: "", email: "", requests: "" }));
   };
 
   return (
-    <div className="bg-gradient-to-br from-amber-50 to-orange-100 text-gray-800 min-h-screen">
-      <section className="py-12 px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-yellow-500 to-orange-500 bg-clip-text text-transparent">Event Halls</h1>
-            <p className="text-gray-600 text-lg">Choose the perfect hall for your special event</p>
+    <div className="bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 text-gray-800 min-h-screen">
+      <section className="py-16 px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <span className="inline-block bg-white text-yellow-700 text-xs font-bold px-4 py-1.5 rounded-full shadow-sm mb-4 tracking-wide uppercase">
+              Celebrate With Us
+            </span>
+            <h1 className="text-4xl sm:text-5xl font-bold mb-4 bg-gradient-to-r from-yellow-500 to-orange-500 bg-clip-text text-transparent pacifico">
+              Event Halls
+            </h1>
+            <p className="text-gray-600 text-lg max-w-xl mx-auto">
+              Choose the perfect space for your celebration.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-            {halls.map((hall) => {
+          {/* Step 1: Hall selection */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {HALLS.map((hall) => {
               const isSelected = selectedHall?.id === hall.id;
-              let cardClasses = "hall-card bg-white rounded-2xl shadow-2xl p-6 border-4 cursor-pointer transition-all duration-300 hover:scale-105 ";
-              if (isSelected) cardClasses += "border-transparent bg-gradient-to-r from-yellow-400 to-amber-500 text-white transform scale-105 ";
-              else if (hall.booked) cardClasses += "border-gray-500 bg-gray-400 cursor-not-allowed opacity-70 ";
-              else cardClasses += "border-yellow-400 ";
-
               return (
-                <div key={hall.id} className={cardClasses} onClick={() => handleHallClick(hall)}>
-                  <div className="text-center mb-4">
-                    <h3 className={`text-2xl font-bold mb-2 ${isSelected ? 'text-white' : 'text-gray-800'}`}>{hall.name}</h3>
-                    <p className={`text-3xl font-bold ${isSelected ? 'text-white' : 'text-yellow-600'}`}>₹{hall.price}</p>
-                    <p className={`text-sm ${isSelected ? 'text-white' : 'text-gray-600'}`}>Capacity: {hall.capacity} people</p>
+                <button
+                  key={hall.id}
+                  type="button"
+                  onClick={() => setSelectedHall(hall)}
+                  className={`text-left rounded-3xl overflow-hidden shadow-lg transition-all duration-300 ${
+                    isSelected ? "ring-4 ring-yellow-400 scale-[1.02]" : "hover:shadow-2xl hover:scale-[1.01]"
+                  }`}
+                >
+                  <div className={`bg-gradient-to-br ${hall.gradient} p-6 text-white relative`}>
+                    <div className="text-5xl mb-2">{hall.icon}</div>
+                    <h3 className="text-2xl font-bold">{hall.name}</h3>
+                    <p className="text-white/80 text-sm">Up to {hall.capacity} guests</p>
+                    {isSelected && (
+                      <span className="absolute top-4 right-4 bg-white text-green-600 text-xs font-bold px-2.5 py-1 rounded-full">✓ Selected</span>
+                    )}
                   </div>
-                  <div className={`space-y-2 text-sm ${isSelected ? 'text-white' : 'text-gray-600'}`}>
-                    {hall.features.map((feature, i) => (
-                      <p key={i}>✓ {feature}</p>
-                    ))}
+                  <div className="bg-white p-5">
+                    <p className="text-2xl font-bold text-yellow-600 mb-3">₹{hall.price.toLocaleString()}</p>
+                    <ul className="space-y-1.5">
+                      {hall.features.map((feature, i) => (
+                        <li key={i} className="text-sm text-gray-600 flex items-start gap-1.5">
+                          <span className="text-green-500 mt-0.5">✓</span> {feature}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
 
-          {selectedHall && (
-            <div className="animate-fadeIn">
-              <div className="bg-white rounded-2xl shadow-2xl p-8 mb-8 overflow-x-auto">
-                <h2 className="text-3xl font-bold mb-6 text-center text-gray-800">Hall {selectedHall.id} Layout</h2>
-                
-                <div className="flex flex-wrap justify-center mb-8 gap-6">
-                  <div className="flex items-center space-x-2 bg-white px-4 py-2 rounded-lg shadow-md">
-                    <div className="w-6 h-6 bg-red-600 rounded border-2 border-red-700"></div>
-                    <span className="text-sm font-medium">Stage</span>
-                  </div>
-                  <div className="flex items-center space-x-2 bg-white px-4 py-2 rounded-lg shadow-md">
-                    <div className="w-6 h-6 bg-blue-600 rounded border-2 border-blue-700"></div>
-                    <span className="text-sm font-medium">Entrance</span>
-                  </div>
+          {/* Step 2: Event details */}
+          <div className={`bg-white rounded-3xl shadow-xl p-6 sm:p-8 transition-opacity duration-500 ${selectedHall ? "opacity-100" : "opacity-50 pointer-events-none"}`}>
+            <h2 className="font-bold text-xl mb-6 flex items-center gap-2">
+              <span className="w-8 h-8 bg-yellow-400 text-black rounded-full flex items-center justify-center text-sm font-bold">2</span>
+              Event details
+            </h2>
+
+            <form onSubmit={handleBookingSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-2">Event Date</label>
+                  <input type="date" name="date" value={formData.date} onChange={handleInputChange} min={new Date().toISOString().split("T")[0]} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-gray-50" />
                 </div>
-
-                <div className="relative bg-gradient-to-br from-amber-50 to-yellow-100 rounded-xl p-8 min-h-[500px] border-4 border-amber-200">
-                  <div className="bg-red-600 text-white px-10 py-4 rounded-lg text-sm font-bold absolute top-4 left-1/2 transform -translate-x-1/2 shadow-lg">STAGE</div>
-                  
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center w-full max-w-lg opacity-30 pointer-events-none">
-                    <h1 className="text-6xl font-bold text-amber-900 border-4 border-amber-900 rounded-2xl p-6">HALL {selectedHall.id}</h1>
-                  </div>
-
-                  <div className="bg-blue-600 text-white absolute bottom-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg text-sm font-bold shadow-lg">ENTRANCE</div>
-                  <div className="bg-red-500 text-white absolute top-4 right-4 px-4 py-2 rounded-lg text-sm font-bold shadow-lg">KITCHEN</div>
-                  <div className="bg-purple-600 text-white absolute bottom-4 right-4 px-4 py-2 rounded-lg text-sm font-bold shadow-lg">RESTROOM</div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-2">Number of Guests</label>
+                  <input type="number" name="guestCount" value={formData.guestCount} onChange={handleInputChange} max={selectedHall?.capacity} placeholder={selectedHall ? `Max ${selectedHall.capacity}` : ""} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-gray-50" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-2">Event Type</label>
+                  <select name="eventType" value={formData.eventType} onChange={handleInputChange} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-gray-50">
+                    <option value="">Select type</option>
+                    {EVENT_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
+                  </select>
                 </div>
               </div>
 
-              <form className="bg-white rounded-2xl shadow-2xl p-8" onSubmit={handleBookingSubmit}>
-                <h2 className="text-3xl font-bold mb-6 text-gray-800">Event Booking Details</h2>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Selected Hall</label>
-                    <input type="text" readOnly className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 font-semibold text-gray-700" value={selectedHall.name} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Price</label>
-                    <input type="text" readOnly className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 font-semibold text-gray-700" value={`₹${selectedHall.price}`} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Event Date</label>
-                    <input type="date" name="date" value={formData.date} onChange={handleInputChange} min={new Date().toISOString().split("T")[0]} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" required />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Event Time</label>
-                    <select name="time" value={formData.time} onChange={handleInputChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" required>
-                      <option value="">Select time</option>
-                      <option value="10:00">10:00 AM</option>
-                      <option value="12:00">12:00 PM</option>
-                      <option value="15:00">3:00 PM</option>
-                      <option value="18:00">6:00 PM</option>
-                      <option value="20:00">8:00 PM</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Event Type</label>
-                    <select name="eventType" value={formData.eventType} onChange={handleInputChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" required>
-                      <option value="">Select event type</option>
-                      <option value="Birthday Party">Birthday Party</option>
-                      <option value="Corporate Event">Corporate Event</option>
-                      <option value="Wedding Reception">Wedding Reception</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Number of Guests</label>
-                    <input type="number" name="guestCount" value={formData.guestCount} onChange={handleInputChange} max={selectedHall.capacity} placeholder={`Max ${selectedHall.capacity}`} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" required />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Contact Name</label>
-                    <input type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="Your full name" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" required />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
-                    <input type="tel" name="phone" value={formData.phone} onChange={handleInputChange} placeholder="Your phone number" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" required />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                    <input type="email" name="email" value={formData.email} onChange={handleInputChange} placeholder="Your email address" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" required />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Special Requirements</label>
-                    <textarea name="requests" value={formData.requests} onChange={handleInputChange} placeholder="Any special requirements, dietary restrictions, or additional services needed" rows="3" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"></textarea>
-                  </div>
-                  <div className="md:col-span-2 mt-8 text-center">
-                    <button type="submit" className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-black font-bold py-4 px-10 rounded-full shadow-lg transition-all duration-300 hover:scale-105 transform">
-                      Confirm Event Booking
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-2">Event Time</label>
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                  {TIME_SLOTS.map((slot) => (
+                    <button
+                      key={slot}
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, time: slot }))}
+                      className={`text-xs font-semibold py-2.5 rounded-lg transition ${
+                        formData.time === slot
+                          ? "bg-yellow-400 text-black shadow-md"
+                          : "bg-gray-50 text-gray-600 hover:bg-yellow-50 border border-gray-200"
+                      }`}
+                    >
+                      {slot}
                     </button>
-                  </div>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {showModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]" onClick={(e) => { if (e.target === e.currentTarget) closeModal() }}>
-              <div className="bg-white rounded-2xl p-8 max-w-md mx-4 shadow-2xl relative animate-fadeIn">
-                <div className="text-center">
-                  <div className="w-20 h-20 bg-gradient-to-r from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                    <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                  </div>
-                  <h3 className="text-3xl font-bold text-green-600 mb-3">Event Booked Successfully!</h3>
-                  <p className="text-gray-600 mb-6">Your event has been reserved. We'll send you a confirmation shortly.</p>
-                  <div className="space-y-3 text-sm text-gray-500 bg-gray-50 p-4 rounded-lg text-left">
-                    <p><strong>Hall:</strong> <span className="text-gray-700">{selectedHall?.name}</span></p>
-                    <p><strong>Date:</strong> <span className="text-gray-700">{formData.date}</span></p>
-                    <p><strong>Time:</strong> <span className="text-gray-700">{formData.time}</span></p>
-                    <p><strong>Event Type:</strong> <span className="text-gray-700">{formData.eventType}</span></p>
-                  </div>
-                  <button onClick={closeModal} className="mt-6 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-black font-bold py-3 px-8 rounded-full transition-all duration-300 shadow-lg w-full">
-                    Close
-                  </button>
+                  ))}
                 </div>
               </div>
-            </div>
-          )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="Contact name" className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-gray-50" />
+                <input type="tel" name="phone" value={formData.phone} onChange={handleInputChange} placeholder="Phone number" className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-gray-50" />
+                <input type="email" name="email" value={formData.email} onChange={handleInputChange} placeholder="Email address" className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-gray-50 md:col-span-2" />
+                <textarea name="requests" value={formData.requests} onChange={handleInputChange} placeholder="Special requirements (optional)" rows="3" className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-gray-50 md:col-span-2"></textarea>
+              </div>
+
+              <button
+                type="submit"
+                disabled={!readyToConfirm}
+                className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-black font-bold py-4 px-10 rounded-full shadow-lg transition-all duration-300 hover:scale-[1.02]"
+              >
+                Confirm Event Booking
+              </button>
+            </form>
+          </div>
         </div>
       </section>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4" onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}>
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl relative animate-[fadeIn_0.3s_ease-out]">
+            <div className="text-center">
+              <div className="w-20 h-20 bg-gradient-to-r from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg text-4xl">
+                🎉
+              </div>
+              <h3 className="text-2xl font-bold text-green-600 mb-2">Event Booked!</h3>
+              <p className="text-gray-500 mb-6">We'll send a confirmation to {formData.email} shortly.</p>
+              <div className="space-y-2 text-sm text-left bg-gray-50 p-5 rounded-2xl">
+                <div className="flex justify-between"><span className="text-gray-500">Hall</span><span className="font-semibold">{selectedHall?.icon} {selectedHall?.name}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Date</span><span className="font-semibold">{formData.date}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Time</span><span className="font-semibold">{formData.time}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Type</span><span className="font-semibold">{formData.eventType}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Guests</span><span className="font-semibold">{formData.guestCount}</span></div>
+              </div>
+              <button onClick={closeModal} className="mt-6 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-black font-bold py-3 px-8 rounded-full transition-all duration-300 shadow-lg w-full">
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
