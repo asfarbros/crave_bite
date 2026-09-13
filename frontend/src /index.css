@@ -1,0 +1,168 @@
+@import "tailwindcss";
+
+.pacifico { 
+  font-family: 'Pacifico', cursive;
+}
+
+.table-seat {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  position: relative;
+}
+
+.table-seat:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+.table-seat.selected {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  border-color: #d97706;
+  box-shadow: 0 0 25px rgba(251, 191, 36, 0.6);
+}
+
+.table-seat.booked {
+  background: linear-gradient(135deg, #9ca3af, #6b7280);
+  border-color: #4b5563;
+  cursor: not-allowed;
+}
+
+.table-seat.booked:hover {
+  transform: none;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.booking-success {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.restaurant-layout {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 25%, #fbbf24 50%, #f59e0b 75%, #d97706 100%);
+  border: 6px solid #92400e;
+  position: relative;
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.restaurant-layout::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.1) 2px, transparent 2px),
+    radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.1) 2px, transparent 2px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  border-radius: 14px;
+}
+
+.area-label {
+  background: linear-gradient(135deg, #1f2937, #374151);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 12px;
+  border: 2px solid #4b5563;
+}
+
+.window {
+  background: linear-gradient(180deg, #87ceeb 0%, #b0e0e6 50%, #87ceeb 100%);
+  border: 3px solid #4682b4;
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.kitchen {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  border: 2px solid #991b1b;
+  box-shadow: none;
+}
+
+.restroom {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  border: 2px solid #5b21b6;
+}
+
+.entrance {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  border-radius: 20px 20px 0 0;
+}
+
+.bar {
+  background: linear-gradient(135deg, #92400e, #78350f);
+  border: 2px solid #451a03;
+}
+
+.table-seat[data-table="9"] {
+  background: linear-gradient(135deg, #fb923c, #ea580c) !important;
+  border-color: #c2410c !important;
+}
+
+.table-seat[data-table="9"].selected {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b) !important;
+  border-color: #d97706 !important;
+}
+
+.table-seat[data-table="9"].booked {
+  background: linear-gradient(135deg, #9ca3af, #6b7280) !important;
+  border-color: #4b5563 !important;
+}
+
+.table-number {
+  font-size: 20px;
+  font-weight: bold;
+  color: white;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  text-align: center;
+  line-height: 1.2;
+}
+
+.seat-indicator {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #ffd700;
+  border: 2px solid #b8860b;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.square-table {
+  background: linear-gradient(135deg, #8b4513, #a0522d);
+  border: 4px solid #654321;
+}
+
+.triangle-table {
+  background: linear-gradient(135deg, #8b4513, #a0522d);
+  border: 4px solid #654321;
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+}
+
+.circular-table {
+  background: linear-gradient(135deg, #374151, #1f2937);
+  border: 4px solid #111827;
+  border-radius: 50%;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.legend-available {
+  background: linear-gradient(135deg, #8b4513, #a0522d);
+  border: 2px solid #654321;
+  border-radius: 50%;
+}
