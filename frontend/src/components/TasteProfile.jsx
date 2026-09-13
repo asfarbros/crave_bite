@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { API_URL } from "../config";
 
 function TasteProfile() {
   const [profile, setProfile] =
@@ -27,7 +28,7 @@ function TasteProfile() {
       if (!userId) return;
 
       const response = await fetch(
-        `http://localhost:5000/api/taste-profile/${userId}`
+        `${API_URL}/api/taste-profile/${userId}`
       );
 
       const data =
@@ -59,15 +60,6 @@ function TasteProfile() {
     );
 
     return entries[0][0];
-  };
-
-  const getPercentage = (value) => {
-    return Math.round(
-      Math.max(
-        0,
-        Math.min(10, value || 0)
-      ) * 10
-    );
   };
 
   if (!profile) {

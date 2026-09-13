@@ -201,38 +201,47 @@ The frontend will provide buttons for adding items and going to checkout.
 
         /*
         |--------------------------------------------------------------------------
-        | First Gemini request
+        | Gemini tool-calling loop
         |--------------------------------------------------------------------------
+        | A single user message can require more than one tool call in sequence
+        | (e.g. re-searching for an item mentioned earlier to recover its ID, then
+        | adding it to the cart) since conversation history only round-trips plain
+        | text, not structured function-call state. Keep `tools` enabled on every
+        | request and loop until Gemini stops asking for function calls.
         */
 
-        let response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents,
-            config: {
-                systemInstruction,
-                tools: [
-                    {
-                        functionDeclarations: [
-                            searchMenuFunction,
-                            addToCartFunction,
-                        ],
-                    },
+        const tools = [
+            {
+                functionDeclarations: [
+                    searchMenuFunction,
+                    addToCartFunction,
                 ],
             },
+        ];
+
+        let workingContents = contents;
+
+        let response = await ai.models.generateContent({
+            model: "gemini-3.6-flash",
+            contents: workingContents,
+            config: {
+                systemInstruction,
+                tools,
+            },
         });
-
-        /*
-        |--------------------------------------------------------------------------
-        | Handle Gemini function calls
-        |--------------------------------------------------------------------------
-        */
-
-        let functionCalls = response.functionCalls;
 
         let menuResults = [];
         let addedItem = null;
 
-        if (functionCalls && functionCalls.length > 0) {
+        const MAX_TOOL_ROUNDS = 4;
+
+        for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+            const functionCalls = response.functionCalls;
+
+            if (!functionCalls || functionCalls.length === 0) {
+                break;
+            }
+
             const functionResponses = [];
 
             for (const call of functionCalls) {
@@ -319,6 +328,7 @@ The frontend will provide buttons for adding items and going to checkout.
                     if (cartItem) {
                         cartItem.quantity += quantity;
                         cartItem.price = food.price;
+                        cartItem.imageUrl = food.imageUrl;
 
                         await cartItem.save();
                     } else {
@@ -326,6 +336,7 @@ The frontend will provide buttons for adding items and going to checkout.
                             name: food.name,
                             price: food.price,
                             quantity,
+                            imageUrl: food.imageUrl,
                             userId,
                         });
                     }
@@ -356,25 +367,29 @@ The frontend will provide buttons for adding items and going to checkout.
 
             /*
             |--------------------------------------------------------------------------
-            | Send function results back to Gemini
+            | Send function results back to Gemini (tools still enabled in case
+            | another round of function calls is needed)
             |--------------------------------------------------------------------------
             */
 
+            workingContents = [
+                ...workingContents,
+                {
+                    role: "model",
+                    parts: response.candidates[0].content.parts,
+                },
+                {
+                    role: "user",
+                    parts: functionResponses,
+                },
+            ];
+
             response = await ai.models.generateContent({
-                model: "gemini-2.5-flash",
-                contents: [
-                    ...contents,
-                    {
-                        role: "model",
-                        parts: response.candidates[0].content.parts,
-                    },
-                    {
-                        role: "user",
-                        parts: functionResponses,
-                    },
-                ],
+                model: "gemini-3.6-flash",
+                contents: workingContents,
                 config: {
                     systemInstruction,
+                    tools,
                 },
             });
         }

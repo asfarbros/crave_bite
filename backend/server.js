@@ -9,8 +9,11 @@ const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
 const paymentRoutes = require('./routes/payment');
 const cartRoutes = require('./routes/cart');
-const orderRoutes = require('./routes/order.routes');
+const orderRoutes = require('./routes/order');
 const foodRoutes = require('./routes/food');
+const chatbotRoutes = require('./routes/chatbot');
+const recommendationsRoutes = require('./routes/recommendations');
+const tasteProfileRoutes = require('./routes/tasteProfile');
 const { protect } = require('./middleware/auth');
 
 const app = express();
@@ -36,29 +39,48 @@ app.use(cors({
 }));
 
 
-// Rate limiting
-const limiter = rateLimit({
+// Rate limiting — a lenient general limit for normal browsing/API use,
+// plus a strict limit scoped to auth endpoints where brute-force protection matters.
+const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: 1000, // per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.path === '/api/health'
 });
-app.use(limiter);
+app.use(generalLimiter);
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // per IP, covers signup/login/forgot-password attempts
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many attempts. Please try again later.' }
+});
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/cart', cartRoutes); 
 app.use('/api/order', orderRoutes);
 app.use('/api/foods', foodRoutes);
+app.use('/api/chatbot', chatbotRoutes);
+app.use('/api/recommendations', recommendationsRoutes);
+app.use('/api/taste-profile', tasteProfileRoutes);
 
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Server is running' });
+  res.json({
+    status: 'OK',
+    message: 'Server is running',
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+  });
 });
 
 // Error handling middleware
@@ -88,8 +110,8 @@ mongoose.connect(process.env.MONGODB_URI , {
   startServer();
 })
 .catch((err) => {
-  console.error('❌ MongoDB connection error:', err);
-  console.log('⚠️  Starting server without MongoDB (some features will be limited)');
+  console.error('❌ MongoDB connection error:', err.message);
+  console.error('⚠️  Starting server without MongoDB — database-dependent routes will return errors until MONGODB_URI is fixed and the server is restarted.');
   startServer();
 });
 

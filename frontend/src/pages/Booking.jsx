@@ -1,35 +1,43 @@
 import React, { useState, useEffect } from "react";
 
+const TABLE_TYPES = [
+  { id: "vip", name: "VIP Lounge", seats: "2–4 guests", icon: "👑", vibe: "Premium & Private", desc: "Elevated seating with dedicated service." },
+  { id: "window", name: "Window Seat", seats: "2–4 guests", icon: "🌇", vibe: "Scenic & Romantic", desc: "Perfect for date nights and golden hour." },
+  { id: "family", name: "Family Table", seats: "4–6 guests", icon: "👨‍👩‍👧‍👦", vibe: "Spacious & Casual", desc: "Room to spread out with the whole crew." },
+  { id: "bar", name: "Bar Counter", seats: "1–2 guests", icon: "🍹", vibe: "Casual & Social", desc: "Grab a seat by the action." },
+  { id: "booth", name: "Private Booth", seats: "4–8 guests", icon: "🛋️", vibe: "Cozy & Enclosed", desc: "Tucked-away comfort for groups." },
+];
+
+const TIME_SLOTS = ["12:00 PM", "1:00 PM", "6:00 PM", "7:00 PM", "8:00 PM", "9:00 PM"];
+
 function Booking() {
   const [selectedTable, setSelectedTable] = useState(null);
   const [formData, setFormData] = useState({
     date: "",
     time: "",
+    guests: 2,
     name: "",
     phone: "",
     email: "",
     requests: ""
   });
   const [showModal, setShowModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    // Set minimum date to today
     const today = new Date().toISOString().split("T")[0];
     setFormData((prev) => ({ ...prev, date: today }));
   }, []);
-
-  const handleTableClick = (tableData) => {
-    if (tableData.booked) return;
-    setSelectedTable(tableData);
-  };
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const readyToConfirm = selectedTable && formData.date && formData.time && formData.name && formData.phone && formData.email;
+
   const handleBookingSubmit = (e) => {
     e.preventDefault();
-    if (!selectedTable) return;
+    if (!readyToConfirm) return;
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
@@ -37,29 +45,25 @@ function Booking() {
       return;
     }
 
-    // In a real app we'd send this to the backend
-    // Mark as booked locally
-    // selectedTable.booked = true -> Not implementing persistent local state right now to simulate
+    setSubmitting(true);
 
-    // Send email via EmailJS
     const templateParams = {
       to_name: formData.name,
       email: formData.email,
       table_name: selectedTable.name,
       booking_date: formData.date,
       booking_time: formData.time,
-      seats: selectedTable.seats
+      seats: formData.guests
     };
 
     if (window.emailjs) {
       window.emailjs
         .send("service_bvn3n88", "template_f79gdco", templateParams)
-        .then(() => {
-          console.log(`Confirmation email sent to ${formData.email}!`);
-        })
-        .catch((error) => {
-          console.error("Email sending failed:", error);
-        });
+        .then(() => console.log(`Confirmation email sent to ${formData.email}!`))
+        .catch((error) => console.error("Email sending failed:", error))
+        .finally(() => setSubmitting(false));
+    } else {
+      setSubmitting(false);
     }
 
     setShowModal(true);
@@ -68,196 +72,160 @@ function Booking() {
   const closeModal = () => {
     setShowModal(false);
     setSelectedTable(null);
-    setFormData({ ...formData, time: "", name: "", phone: "", email: "", requests: "" });
-  };
-
-  // Helper for rendering tables
-  const Table = ({ id, seats, name, type, addedClasses, top, left, right, bottom }) => {
-    const isSelected = selectedTable?.id === id;
-    const isBooked = false; // Mock data
-    let baseClass = "table-seat flex items-center justify-center ";
-
-    if (type === "square") baseClass += "square-table w-28 h-28 ";
-    if (type === "small-square") baseClass += "square-table w-24 h-24 ";
-    if (type === "circular") baseClass += "circular-table w-32 h-32 ";
-    if (type === "medium-circular") baseClass += "circular-table w-28 h-28 ";
-    if (type === "small-circular") baseClass += "circular-table w-20 h-20 ";
-    
-    if (isSelected) baseClass += "selected ";
-    if (isBooked) baseClass += "booked ";
-    if (addedClasses) baseClass += addedClasses;
-
-    return (
-      <div 
-        className={baseClass} 
-        style={{ position: 'absolute', top, left, right, bottom }}
-        onClick={() => handleTableClick({ id, seats, name, booked: isBooked })}
-        data-table={id}
-      >
-        <div className="table-number text-sm">
-          {name.replace("Table ", "")}<br />{seats} seats
-        </div>
-        {/* Simplified seat indicators for visual parity */}
-      </div>
-    );
+    setFormData((prev) => ({ ...prev, time: "", guests: 2, name: "", phone: "", email: "", requests: "" }));
   };
 
   return (
-    <div className="bg-gradient-to-br from-amber-50 to-orange-100 text-gray-800 min-h-screen">
-      <section className="py-12 px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-yellow-500 to-orange-500 bg-clip-text text-transparent">Book Your Table</h1>
-            <p className="text-gray-600 text-lg">Select your preferred table from our restaurant layout</p>
+    <div className="bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 text-gray-800 min-h-screen">
+      <section className="py-16 px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <span className="inline-block bg-white text-yellow-700 text-xs font-bold px-4 py-1.5 rounded-full shadow-sm mb-4 tracking-wide uppercase">
+              Reserve Your Spot
+            </span>
+            <h1 className="text-4xl sm:text-5xl font-bold mb-4 bg-gradient-to-r from-yellow-500 to-orange-500 bg-clip-text text-transparent pacifico">
+              Book Your Table
+            </h1>
+            <p className="text-gray-600 text-lg max-w-xl mx-auto">
+              Pick a vibe, a time, and we'll take care of the rest.
+            </p>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-2xl p-8 mb-8 overflow-x-auto">
-            <h2 className="text-3xl font-bold mb-6 text-center text-gray-800">Restaurant Layout</h2>
-            
-            <div className="flex flex-wrap justify-center mb-8 gap-6 min-w-[600px]">
-              <div className="flex items-center space-x-2 bg-white px-4 py-2 rounded-lg shadow-md">
-                <div className="w-6 h-6 rounded-full border-2 border-gray-500 legend-available"></div>
-                <span className="text-sm font-medium">Available</span>
+          {/* Step 1: Date, time, guests */}
+          <div className="bg-white rounded-3xl shadow-xl p-6 sm:p-8 mb-8">
+            <h2 className="font-bold text-xl mb-6 flex items-center gap-2">
+              <span className="w-8 h-8 bg-yellow-400 text-black rounded-full flex items-center justify-center text-sm font-bold">1</span>
+              When are you coming in?
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-2">Date</label>
+                <input
+                  type="date"
+                  name="date"
+                  value={formData.date}
+                  onChange={handleInputChange}
+                  min={new Date().toISOString().split("T")[0]}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-gray-50"
+                />
               </div>
-              <div className="flex items-center space-x-2 bg-white px-4 py-2 rounded-lg shadow-md">
-                <div className="w-6 h-6 bg-yellow-400 rounded-full border-2 border-yellow-500"></div>
-                <span className="text-sm font-medium">Selected</span>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-2">Party Size</label>
+                <select
+                  name="guests"
+                  value={formData.guests}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-gray-50"
+                >
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+                    <option key={n} value={n}>{n} {n === 1 ? "guest" : "guests"}</option>
+                  ))}
+                </select>
               </div>
-              <div className="flex items-center space-x-2 bg-white px-4 py-2 rounded-lg shadow-md">
-                <div className="w-6 h-6 bg-gray-400 rounded-full border-2 border-gray-500"></div>
-                <span className="text-sm font-medium">Booked</span>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-2">Time</label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {TIME_SLOTS.map((slot) => (
+                    <button
+                      key={slot}
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, time: slot }))}
+                      className={`text-xs font-semibold py-2 rounded-lg transition ${
+                        formData.time === slot
+                          ? "bg-yellow-400 text-black shadow-md"
+                          : "bg-gray-50 text-gray-600 hover:bg-yellow-50 border border-gray-200"
+                      }`}
+                    >
+                      {slot}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="flex items-center space-x-2 bg-white px-4 py-2 rounded-lg shadow-md">
-                <div className="w-6 h-6 window rounded border-2 border-blue-400"></div>
-                <span className="text-sm font-medium">Window</span>
-              </div>
-            </div>
-
-            <div className="relative restaurant-layout rounded-xl p-8 min-h-[900px] min-w-[800px] mx-auto overflow-hidden">
-              <div className="absolute top-4 left-4 area-label">VIP AREA</div>
-              <div className="absolute top-4 right-32 area-label">BAR AREA</div>
-              <div className="absolute bottom-4 left-4 area-label">MAIN DINING</div>
-              <div className="absolute bottom-4 right-4 area-label">PRIVATE BOOTHS</div>
-
-              {/* VIP Area */}
-              <Table id="1" seats="4" name="VIP 1" type="square" top="5rem" left="2rem" />
-              <Table id="2" seats="4" name="VIP 2" type="square" top="14rem" left="2rem" />
-              <Table id="3" seats="4" name="VIP 3" type="square" top="23rem" left="2rem" />
-
-              {/* Center Circular Tables */}
-              <Table id="4" seats="6" name="Table 4" type="circular" top="5rem" left="50%" addedClasses="-translate-x-1/2" />
-              <Table id="5" seats="6" name="Table 5" type="circular" top="15rem" left="50%" addedClasses="-translate-x-1/2" />
-              <Table id="6" seats="6" name="Table 6" type="circular" top="25rem" left="50%" addedClasses="-translate-x-1/2" />
-
-              {/* Bar Area */}
-              <Table id="7" seats="2" name="BAR 1" type="small-circular" top="8rem" right="8rem" />
-              <Table id="8" seats="2" name="BAR 2" type="small-circular" top="14rem" right="8rem" />
-              <Table id="9" seats="2" name="BAR 3" type="small-circular" top="20rem" right="8rem" />
-
-              {/* Booths Left */}
-              <Table id="10" seats="4" name="BOOTH 1" type="small-square" bottom="12rem" left="2rem" />
-              <Table id="11" seats="4" name="BOOTH 2" type="small-square" bottom="4rem" left="2rem" />
-
-              {/* Lower Circular Tables */}
-              <Table id="12" seats="6" name="Table 7" type="medium-circular" bottom="14rem" left="50%" addedClasses="-translate-x-1/2" />
-              <Table id="13" seats="6" name="Table 8" type="medium-circular" bottom="4rem" left="50%" addedClasses="-translate-x-1/2" />
-
-              {/* Booths Right */}
-              <Table id="14" seats="4" name="BOOTH 3" type="small-square" bottom="12rem" right="2rem" />
-              <Table id="15" seats="4" name="BOOTH 4" type="small-square" bottom="4rem" right="2rem" />
-
-              <div className="absolute bottom-4 right-4 restroom text-white px-6 py-3 rounded-lg text-sm font-bold">🚻 RESTROOM</div>
-              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 entrance text-white px-6 py-3 rounded-lg text-sm font-bold">🚪 ENTRANCE</div>
             </div>
           </div>
 
-          <form id="booking-form-element" className="bg-white rounded-2xl shadow-2xl p-8" onSubmit={handleBookingSubmit}>
-            <h2 className="text-3xl font-bold mb-6 text-gray-800">Booking Details</h2>
-            
-            {!selectedTable ? (
-              <div className="text-center py-8 text-gray-500">
-                <div className="w-16 h-16 mx-auto mb-4 bg-gray-200 rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                  </svg>
-                </div>
-                <p className="text-lg">Please select a table from the layout above</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fadeIn">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Selected Table</label>
-                  <input type="text" readOnly className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 font-semibold" value={selectedTable.name} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Number of Seats</label>
-                  <input type="text" readOnly className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 font-semibold" value={`${selectedTable.seats} seats`} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
-                  <input type="date" name="date" value={formData.date} onChange={handleInputChange} min={new Date().toISOString().split("T")[0]} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" required />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
-                  <select name="time" value={formData.time} onChange={handleInputChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" required>
-                    <option value="">Select time</option>
-                    <option value="12:00">12:00 PM</option>
-                    <option value="13:00">1:00 PM</option>
-                    <option value="18:00">6:00 PM</option>
-                    <option value="19:00">7:00 PM</option>
-                    <option value="20:00">8:00 PM</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
-                  <input type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="Your full name" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" required />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
-                  <input type="tel" name="phone" value={formData.phone} onChange={handleInputChange} placeholder="Your phone number" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" required />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                  <input type="email" name="email" value={formData.email} onChange={handleInputChange} placeholder="Your email address" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400" required />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Special Requests</label>
-                  <textarea name="requests" value={formData.requests} onChange={handleInputChange} placeholder="Any special requests or dietary requirements" rows="3" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"></textarea>
-                </div>
-                <div className="md:col-span-2 mt-8 text-center">
-                  <button type="submit" className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-black font-bold py-4 px-10 rounded-full shadow-lg transition-all duration-300 hover:scale-105 transform">
-                    Confirm Booking
+          {/* Step 2: Table vibe */}
+          <div className="bg-white rounded-3xl shadow-xl p-6 sm:p-8 mb-8">
+            <h2 className="font-bold text-xl mb-6 flex items-center gap-2">
+              <span className="w-8 h-8 bg-yellow-400 text-black rounded-full flex items-center justify-center text-sm font-bold">2</span>
+              Choose your vibe
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {TABLE_TYPES.map((table) => {
+                const isSelected = selectedTable?.id === table.id;
+                return (
+                  <button
+                    key={table.id}
+                    type="button"
+                    onClick={() => setSelectedTable(table)}
+                    className={`text-left p-5 rounded-2xl border-2 transition-all duration-300 ${
+                      isSelected
+                        ? "border-yellow-400 bg-gradient-to-br from-yellow-50 to-orange-50 shadow-lg scale-[1.02]"
+                        : "border-gray-100 hover:border-yellow-200 hover:shadow-md"
+                    }`}
+                  >
+                    <div className="text-4xl mb-3">{table.icon}</div>
+                    <p className="font-bold text-gray-800">{table.name}</p>
+                    <p className="text-xs font-semibold text-yellow-600 mb-2">{table.vibe}</p>
+                    <p className="text-sm text-gray-500 mb-2">{table.desc}</p>
+                    <p className="text-xs text-gray-400">{table.seats}</p>
+                    {isSelected && (
+                      <div className="mt-3 text-yellow-600 text-sm font-bold flex items-center gap-1">
+                        ✓ Selected
+                      </div>
+                    )}
                   </button>
-                </div>
-              </div>
-            )}
-          </form>
-
-          {showModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]" onClick={(e) => { if (e.target === e.currentTarget) closeModal() }}>
-              <div className="bg-white rounded-2xl p-8 max-w-md mx-4 booking-success shadow-2xl relative">
-                <div className="text-center">
-                  <div className="w-20 h-20 bg-gradient-to-r from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                    <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                  </div>
-                  <h3 className="text-3xl font-bold text-green-600 mb-3">Booking Successful!</h3>
-                  <p className="text-gray-600 mb-6">Your table has been reserved. We'll send you a confirmation shortly.</p>
-                  <div className="space-y-3 text-sm text-gray-500 bg-gray-50 p-4 rounded-lg text-left">
-                    <p><strong>Table:</strong> <span className="text-gray-700">{selectedTable?.name}</span></p>
-                    <p><strong>Date:</strong> <span className="text-gray-700">{formData.date}</span></p>
-                    <p><strong>Time:</strong> <span className="text-gray-700">{formData.time}</span></p>
-                  </div>
-                  <button onClick={closeModal} className="mt-6 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-black font-bold py-3 px-8 rounded-full transition-all duration-300 shadow-lg w-full">
-                    Close
-                  </button>
-                </div>
-              </div>
+                );
+              })}
             </div>
-          )}
+          </div>
+
+          {/* Step 3: Contact details */}
+          <div className={`bg-white rounded-3xl shadow-xl p-6 sm:p-8 transition-opacity duration-500 ${selectedTable ? "opacity-100" : "opacity-50 pointer-events-none"}`}>
+            <h2 className="font-bold text-xl mb-6 flex items-center gap-2">
+              <span className="w-8 h-8 bg-yellow-400 text-black rounded-full flex items-center justify-center text-sm font-bold">3</span>
+              Your details
+            </h2>
+            <form onSubmit={handleBookingSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="Your full name" className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-gray-50" required />
+              <input type="tel" name="phone" value={formData.phone} onChange={handleInputChange} placeholder="Your phone number" className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-gray-50" required />
+              <input type="email" name="email" value={formData.email} onChange={handleInputChange} placeholder="Your email address" className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-gray-50 md:col-span-2" required />
+              <textarea name="requests" value={formData.requests} onChange={handleInputChange} placeholder="Special requests (optional)" rows="3" className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-gray-50 md:col-span-2"></textarea>
+
+              <button
+                type="submit"
+                disabled={!readyToConfirm || submitting}
+                className="md:col-span-2 mt-2 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-black font-bold py-4 px-10 rounded-full shadow-lg transition-all duration-300 hover:scale-[1.02]"
+              >
+                {submitting ? "Confirming..." : "Confirm Booking"}
+              </button>
+            </form>
+          </div>
         </div>
       </section>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4" onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}>
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl relative animate-[fadeIn_0.3s_ease-out]">
+            <div className="text-center">
+              <div className="w-20 h-20 bg-gradient-to-r from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg text-4xl">
+                🎉
+              </div>
+              <h3 className="text-2xl font-bold text-green-600 mb-2">Table Reserved!</h3>
+              <p className="text-gray-500 mb-6">We'll send a confirmation to {formData.email} shortly.</p>
+              <div className="space-y-2 text-sm text-left bg-gray-50 p-5 rounded-2xl">
+                <div className="flex justify-between"><span className="text-gray-500">Table</span><span className="font-semibold">{selectedTable?.icon} {selectedTable?.name}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Date</span><span className="font-semibold">{formData.date}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Time</span><span className="font-semibold">{formData.time}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Party Size</span><span className="font-semibold">{formData.guests} guests</span></div>
+              </div>
+              <button onClick={closeModal} className="mt-6 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-black font-bold py-3 px-8 rounded-full transition-all duration-300 shadow-lg w-full">
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

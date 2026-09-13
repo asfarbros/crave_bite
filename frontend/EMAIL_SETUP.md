@@ -32,15 +32,13 @@ This guide will help you set up EmailJS to send real confirmation emails when cu
 2. Copy your **Public Key** (e.g., `user_def456`)
 
 ## Step 5: Update the Code
-Replace the placeholder values in `booking.html`:
+Replace the placeholder values in `src/pages/Booking.jsx` (EmailJS is initialized in `index.html` via the CDN script tag, and `service`/`template` IDs are passed directly to `emailjs.send(...)` in `Booking.jsx` and `Home.jsx`):
 
 ```javascript
-// Replace these values in the booking.html file:
-
-// Line 1: Initialize EmailJS
+// src/main.jsx — initializes EmailJS once at startup
 emailjs.init("YOUR_PUBLIC_KEY"); // Replace with your actual public key
 
-// Line 2: Send email
+// src/pages/Booking.jsx and src/pages/Home.jsx — send email
 emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', templateParams)
 ```
 
