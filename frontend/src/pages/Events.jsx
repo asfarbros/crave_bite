@@ -137,9 +137,13 @@ function Events() {
     setSubmitting(true);
 
     try {
+      const token = localStorage.getItem("token");
       const res = await fetch(`${API_URL}/api/hall-booking`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({
           hallId: selectedHall.id,
           date: formData.date,

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Hall = require('../models/Hall');
 const HallBooking = require('../models/HallBooking');
+const { protect, optionalAuth } = require('../middleware/auth');
 
 // GET availability for all halls on a given date + time slot
 router.get('/availability', async (req, res) => {
@@ -39,7 +40,7 @@ router.get('/availability', async (req, res) => {
 });
 
 // POST create a new hall booking
-router.post('/', async (req, res) => {
+router.post('/', optionalAuth, async (req, res) => {
     try {
         const { hallId, date, time, eventType, guestCount, name, phone, email, requests } = req.body;
 
@@ -64,7 +65,10 @@ router.post('/', async (req, res) => {
         }
 
         const booking = await HallBooking.create({
+            userId: req.user ? req.user.id : null,
             hallId,
+            hallName: hall.name,
+            hallIcon: hall.icon,
             date,
             time,
             eventType,
@@ -79,6 +83,17 @@ router.post('/', async (req, res) => {
     } catch (error) {
         console.error('Error creating hall booking:', error);
         res.status(500).json({ success: false, message: 'Server error creating hall booking' });
+    }
+});
+
+// GET the current user's hall bookings
+router.get('/mybookings', protect, async (req, res) => {
+    try {
+        const bookings = await HallBooking.find({ userId: req.user.id }).sort({ createdAt: -1 });
+        res.status(200).json({ success: true, data: bookings });
+    } catch (error) {
+        console.error('Error fetching hall bookings:', error);
+        res.status(500).json({ success: false, message: 'Server error fetching hall bookings' });
     }
 });
 

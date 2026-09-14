@@ -13,6 +13,8 @@ import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import MyOrders from "./pages/MyOrders";
+import BookedTables from "./pages/BookedTables";
+import BookedHalls from "./pages/BookedHalls";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 
@@ -93,6 +95,16 @@ function App() {
           <Route
             path="/myorders"
             element={<MyOrders />}
+          />
+
+          <Route
+            path="/booked-tables"
+            element={<BookedTables />}
+          />
+
+          <Route
+            path="/booked-halls"
+            element={<BookedHalls />}
           />
 
           <Route

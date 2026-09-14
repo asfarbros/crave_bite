@@ -1,10 +1,24 @@
 const mongoose = require('mongoose');
 
 const hallBookingSchema = new mongoose.Schema({
+    userId: {
+        type: String,
+        default: null
+    },
     hallId: {
         type: String,
         required: [true, 'Hall is required'],
         trim: true
+    },
+    hallName: {
+        type: String,
+        trim: true,
+        default: ''
+    },
+    hallIcon: {
+        type: String,
+        trim: true,
+        default: ''
     },
     date: {
         type: String,
@@ -56,5 +70,6 @@ const hallBookingSchema = new mongoose.Schema({
 });
 
 hallBookingSchema.index({ hallId: 1, date: 1, time: 1 });
+hallBookingSchema.index({ userId: 1 });
 
 module.exports = mongoose.model('HallBooking', hallBookingSchema);

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Table = require('../models/Table');
 const Booking = require('../models/Booking');
+const { protect, optionalAuth } = require('../middleware/auth');
 
 // GET availability for all table types on a given date + time slot
 router.get('/availability', async (req, res) => {
@@ -39,7 +40,7 @@ router.get('/availability', async (req, res) => {
 });
 
 // POST create a new booking
-router.post('/', async (req, res) => {
+router.post('/', optionalAuth, async (req, res) => {
     try {
         const { tableTypeId, date, time, guests, name, phone, email, requests } = req.body;
 
@@ -64,7 +65,10 @@ router.post('/', async (req, res) => {
         }
 
         const booking = await Booking.create({
+            userId: req.user ? req.user.id : null,
             tableTypeId,
+            tableName: table.name,
+            tableIcon: table.icon,
             date,
             time,
             guests,
@@ -78,6 +82,17 @@ router.post('/', async (req, res) => {
     } catch (error) {
         console.error('Error creating booking:', error);
         res.status(500).json({ success: false, message: 'Server error creating booking' });
+    }
+});
+
+// GET the current user's table bookings
+router.get('/mybookings', protect, async (req, res) => {
+    try {
+        const bookings = await Booking.find({ userId: req.user.id }).sort({ createdAt: -1 });
+        res.status(200).json({ success: true, data: bookings });
+    } catch (error) {
+        console.error('Error fetching bookings:', error);
+        res.status(500).json({ success: false, message: 'Server error fetching bookings' });
     }
 });
 

@@ -1,10 +1,24 @@
 const mongoose = require('mongoose');
 
 const bookingSchema = new mongoose.Schema({
+    userId: {
+        type: String,
+        default: null
+    },
     tableTypeId: {
         type: String,
         required: [true, 'Table type is required'],
         trim: true
+    },
+    tableName: {
+        type: String,
+        trim: true,
+        default: ''
+    },
+    tableIcon: {
+        type: String,
+        trim: true,
+        default: ''
     },
     date: {
         type: String,
@@ -51,5 +65,6 @@ const bookingSchema = new mongoose.Schema({
 });
 
 bookingSchema.index({ tableTypeId: 1, date: 1, time: 1 });
+bookingSchema.index({ userId: 1 });
 
 module.exports = mongoose.model('Booking', bookingSchema);
