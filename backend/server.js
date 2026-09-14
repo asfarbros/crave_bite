@@ -14,6 +14,8 @@ const foodRoutes = require('./routes/food');
 const chatbotRoutes = require('./routes/chatbot');
 const recommendationsRoutes = require('./routes/recommendations');
 const tasteProfileRoutes = require('./routes/tasteProfile');
+const bookingRoutes = require('./routes/booking');
+const hallBookingRoutes = require('./routes/hallBooking');
 const { protect } = require('./middleware/auth');
 
 const app = express();
@@ -72,6 +74,8 @@ app.use('/api/foods', foodRoutes);
 app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/recommendations', recommendationsRoutes);
 app.use('/api/taste-profile', tasteProfileRoutes);
+app.use('/api/booking', bookingRoutes);
+app.use('/api/hall-booking', hallBookingRoutes);
 
 
 // Health check endpoint
