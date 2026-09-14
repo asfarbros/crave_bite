@@ -277,6 +277,12 @@ function AdminDashboard() {
             >
               Available Tables
             </Link>
+            <Link
+              to="/admin/staff"
+              className="hover:text-yellow-500 transition-colors"
+            >
+              Staff
+            </Link>
             <button
               onClick={adminLogout}
               className="text-red-500 hover:text-red-600 font-semibold transition-colors ml-4 border-l pl-4 border-gray-300"

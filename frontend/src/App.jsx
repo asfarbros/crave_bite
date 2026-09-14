@@ -18,6 +18,7 @@ import BookedHalls from "./pages/BookedHalls";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminAvailableTables from "./pages/AdminAvailableTables";
+import AdminStaff from "./pages/AdminStaff";
 
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -121,6 +122,11 @@ function App() {
           <Route
             path="/admin/available-tables"
             element={<AdminAvailableTables />}
+          />
+
+          <Route
+            path="/admin/staff"
+            element={<AdminStaff />}
           />
 
         </Routes>
