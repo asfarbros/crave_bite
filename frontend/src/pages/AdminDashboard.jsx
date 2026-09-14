@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { API_URL } from "../config";
 
 const toBase64 = (file) =>
@@ -26,6 +26,8 @@ function AdminDashboard() {
 
   const [foods, setFoods] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [tableBookings, setTableBookings] = useState([]);
+  const [hallBookings, setHallBookings] = useState([]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -80,11 +82,43 @@ function AdminDashboard() {
     }
   }, [token]);
 
+  const loadTableBookings = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URL}/api/booking/all`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTableBookings(data.data);
+      }
+    } catch (error) {
+      console.error("Error loading table bookings:", error);
+    }
+  }, [token]);
+
+  const loadHallBookings = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URL}/api/hall-booking/all`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setHallBookings(data.data);
+      }
+    } catch (error) {
+      console.error("Error loading hall bookings:", error);
+    }
+  }, [token]);
+
   useEffect(() => {
     if (!token) return;
     if (tab === "menu") loadMenu();
     if (tab === "orders") loadOrders();
-  }, [tab, token, loadMenu, loadOrders]);
+    if (tab === "tables") loadTableBookings();
+    if (tab === "halls") loadHallBookings();
+  }, [tab, token, loadMenu, loadOrders, loadTableBookings, loadHallBookings]);
 
   const adminLogout = async () => {
     try {
@@ -226,6 +260,24 @@ function AdminDashboard() {
               Orders
             </button>
             <button
+              onClick={() => setTab("tables")}
+              className={tab === "tables" ? "text-yellow-600 font-bold transition-colors" : "hover:text-yellow-500 transition-colors"}
+            >
+              Tables
+            </button>
+            <button
+              onClick={() => setTab("halls")}
+              className={tab === "halls" ? "text-yellow-600 font-bold transition-colors" : "hover:text-yellow-500 transition-colors"}
+            >
+              Halls
+            </button>
+            <Link
+              to="/admin/available-tables"
+              className="hover:text-yellow-500 transition-colors"
+            >
+              Available Tables
+            </Link>
+            <button
               onClick={adminLogout}
               className="text-red-500 hover:text-red-600 font-semibold transition-colors ml-4 border-l pl-4 border-gray-300"
             >
@@ -328,6 +380,112 @@ function AdminDashboard() {
                   );
                 })
               )}
+            </div>
+          </section>
+        )}
+
+        {tab === "tables" && (
+          <section>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Booked Tables</h2>
+            <div className="bg-white rounded-xl shadow overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Table</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Table #</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guests</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requests</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booked On</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {tableBookings.length === 0 ? (
+                    <tr>
+                      <td colSpan="10" className="px-6 py-8 text-center text-gray-500">No table bookings found.</td>
+                    </tr>
+                  ) : (
+                    tableBookings.map((booking) => (
+                      <tr key={booking._id}>
+                        <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{booking.tableIcon} {booking.tableName}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-700">#{booking.tableNumber}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{booking.date}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{booking.time}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{booking.guests}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{booking.name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <div>{booking.phone}</div>
+                          <div className="text-xs text-gray-400">{booking.email}</div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500 max-w-[200px] truncate" title={booking.requests}>{booking.requests || "—"}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${booking.status === "confirmed" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+                            {booking.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-400">{new Date(booking.createdAt).toLocaleString()}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
+        {tab === "halls" && (
+          <section>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Booked Halls</h2>
+            <div className="bg-white rounded-xl shadow overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hall</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event Type</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guests</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requests</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booked On</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {hallBookings.length === 0 ? (
+                    <tr>
+                      <td colSpan="10" className="px-6 py-8 text-center text-gray-500">No hall bookings found.</td>
+                    </tr>
+                  ) : (
+                    hallBookings.map((booking) => (
+                      <tr key={booking._id}>
+                        <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{booking.hallIcon} {booking.hallName}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{booking.date}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{booking.time}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{booking.eventType}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{booking.guestCount}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{booking.name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <div>{booking.phone}</div>
+                          <div className="text-xs text-gray-400">{booking.email}</div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500 max-w-[200px] truncate" title={booking.requests}>{booking.requests || "—"}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${booking.status === "confirmed" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+                            {booking.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-400">{new Date(booking.createdAt).toLocaleString()}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </section>
         )}

@@ -37,6 +37,7 @@ function Booking() {
   const [submitting, setSubmitting] = useState(false);
   const [availability, setAvailability] = useState({});
   const [availabilityError, setAvailabilityError] = useState("");
+  const [bookedTableNumber, setBookedTableNumber] = useState(null);
 
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
@@ -134,6 +135,8 @@ function Booking() {
         setSubmitting(false);
         return;
       }
+
+      setBookedTableNumber(data.data.tableNumber);
     } catch (error) {
       console.error("Booking request failed:", error);
       alert("Something went wrong while confirming your booking. Please try again.");
@@ -166,6 +169,7 @@ function Booking() {
   const closeModal = () => {
     setShowModal(false);
     setSelectedTable(null);
+    setBookedTableNumber(null);
     setFormData((prev) => ({ ...prev, time: "", guests: 2, name: "", phone: "", email: "", requests: "" }));
   };
 
@@ -336,6 +340,9 @@ function Booking() {
               <p className="text-gray-500 mb-6">We'll send a confirmation to {formData.email} shortly.</p>
               <div className="space-y-2 text-sm text-left bg-gray-50 p-5 rounded-2xl">
                 <div className="flex justify-between"><span className="text-gray-500">Table</span><span className="font-semibold">{selectedTable?.icon} {selectedTable?.name}</span></div>
+                {bookedTableNumber && (
+                  <div className="flex justify-between"><span className="text-gray-500">Table Number</span><span className="font-semibold">#{bookedTableNumber}</span></div>
+                )}
                 <div className="flex justify-between"><span className="text-gray-500">Date</span><span className="font-semibold">{formData.date}</span></div>
                 <div className="flex justify-between"><span className="text-gray-500">Time</span><span className="font-semibold">{formData.time}</span></div>
                 <div className="flex justify-between"><span className="text-gray-500">Party Size</span><span className="font-semibold">{formData.guests} guests</span></div>

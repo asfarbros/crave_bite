@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Hall = require('../models/Hall');
 const HallBooking = require('../models/HallBooking');
-const { protect, optionalAuth } = require('../middleware/auth');
+const { protect, optionalAuth, authorize } = require('../middleware/auth');
 
 // GET availability for all halls on a given date + time slot
 router.get('/availability', async (req, res) => {
@@ -94,6 +94,17 @@ router.get('/mybookings', protect, async (req, res) => {
     } catch (error) {
         console.error('Error fetching hall bookings:', error);
         res.status(500).json({ success: false, message: 'Server error fetching hall bookings' });
+    }
+});
+
+// GET all hall bookings (Admin only)
+router.get('/all', protect, authorize('admin'), async (req, res) => {
+    try {
+        const bookings = await HallBooking.find().sort({ createdAt: -1 });
+        res.status(200).json({ success: true, data: bookings });
+    } catch (error) {
+        console.error('Error fetching all hall bookings:', error);
+        res.status(500).json({ success: false, message: 'Server error fetching all hall bookings' });
     }
 });
 

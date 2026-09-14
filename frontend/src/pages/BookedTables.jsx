@@ -115,6 +115,7 @@ function BookedTables() {
                   </div>
 
                   <div className="flex flex-wrap gap-4 pt-4 border-t border-gray-100 text-sm text-gray-600">
+                    <div><span className="text-gray-400">Table No:</span> <span className="font-semibold">#{booking.tableNumber}</span></div>
                     <div><span className="text-gray-400">Date:</span> <span className="font-semibold">{booking.date}</span></div>
                     <div><span className="text-gray-400">Time:</span> <span className="font-semibold">{booking.time}</span></div>
                     <div><span className="text-gray-400">Guests:</span> <span className="font-semibold">{booking.guests}</span></div>

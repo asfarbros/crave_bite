@@ -20,6 +20,11 @@ const bookingSchema = new mongoose.Schema({
         trim: true,
         default: ''
     },
+    tableNumber: {
+        type: Number,
+        required: [true, 'Table number is required'],
+        min: 1
+    },
     date: {
         type: String,
         required: [true, 'Date is required'],
@@ -66,5 +71,10 @@ const bookingSchema = new mongoose.Schema({
 
 bookingSchema.index({ tableTypeId: 1, date: 1, time: 1 });
 bookingSchema.index({ userId: 1 });
+// Prevents two confirmed bookings from ever racing onto the same table number
+bookingSchema.index(
+    { tableTypeId: 1, date: 1, time: 1, tableNumber: 1 },
+    { unique: true, partialFilterExpression: { status: 'confirmed' } }
+);
 
 module.exports = mongoose.model('Booking', bookingSchema);

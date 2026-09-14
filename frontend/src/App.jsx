@@ -17,6 +17,7 @@ import BookedTables from "./pages/BookedTables";
 import BookedHalls from "./pages/BookedHalls";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminAvailableTables from "./pages/AdminAvailableTables";
 
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -115,6 +116,11 @@ function App() {
           <Route
             path="/admin"
             element={<AdminDashboard />}
+          />
+
+          <Route
+            path="/admin/available-tables"
+            element={<AdminAvailableTables />}
           />
 
         </Routes>
