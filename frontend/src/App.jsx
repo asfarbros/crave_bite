@@ -1,5 +1,6 @@
 import React from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
+import OfferPopup from "./components/OfferPopup";
 
 import Home from "./pages/Home";
 import Menu from "./pages/Menu";
@@ -230,10 +231,13 @@ function App() {
 
             {/* Floating AI features */}
 
-            <TasteProfile />
+<TasteProfile />
 
-            <RestaurantChatbot />
+<RestaurantChatbot />
 
+{/* Time-based promotional offers */}
+
+<OfferPopup />
         </div>
     );
 }
