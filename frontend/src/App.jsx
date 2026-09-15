@@ -13,8 +13,12 @@ import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import MyOrders from "./pages/MyOrders";
+import BookedTables from "./pages/BookedTables";
+import BookedHalls from "./pages/BookedHalls";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminAvailableTables from "./pages/AdminAvailableTables";
+import AdminStaff from "./pages/AdminStaff";
 
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -96,6 +100,16 @@ function App() {
           />
 
           <Route
+            path="/booked-tables"
+            element={<BookedTables />}
+          />
+
+          <Route
+            path="/booked-halls"
+            element={<BookedHalls />}
+          />
+
+          <Route
             path="/admin-login"
             element={<AdminLogin />}
           />
@@ -103,6 +117,16 @@ function App() {
           <Route
             path="/admin"
             element={<AdminDashboard />}
+          />
+
+          <Route
+            path="/admin/available-tables"
+            element={<AdminAvailableTables />}
+          />
+
+          <Route
+            path="/admin/staff"
+            element={<AdminStaff />}
           />
 
         </Routes>

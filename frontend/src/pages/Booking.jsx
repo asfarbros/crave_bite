@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { API_URL } from "../config";
 
 const TABLE_TYPES = [
   { id: "vip", name: "VIP Lounge", seats: "2–4 guests", icon: "👑", vibe: "Premium & Private", desc: "Elevated seating with dedicated service." },
@@ -8,7 +9,18 @@ const TABLE_TYPES = [
   { id: "booth", name: "Private Booth", seats: "4–8 guests", icon: "🛋️", vibe: "Cozy & Enclosed", desc: "Tucked-away comfort for groups." },
 ];
 
-const TIME_SLOTS = ["12:00 PM", "1:00 PM", "6:00 PM", "7:00 PM", "8:00 PM", "9:00 PM"];
+const formatHour = (hour) => {
+  const period = hour < 12 || hour === 24 ? "AM" : "PM";
+  const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+  return `${displayHour}:00 ${period}`;
+};
+
+const TIME_SLOTS = Array.from({ length: 16 }, (_, i) => {
+  const start = 7 + i; // 7 AM to 10 PM start hours (last slot 10-11 PM)
+  return { label: `${formatHour(start)} - ${formatHour(start + 1)}`, startHour: start };
+});
+
+const isTodayDate = (dateStr) => dateStr === new Date().toISOString().split("T")[0];
 
 function Booking() {
   const [selectedTable, setSelectedTable] = useState(null);
@@ -23,19 +35,69 @@ function Booking() {
   });
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [availability, setAvailability] = useState({});
+  const [availabilityError, setAvailabilityError] = useState("");
+  const [bookedTableNumber, setBookedTableNumber] = useState(null);
 
   useEffect(() => {
     const today = new Date().toISOString().split("T")[0];
     setFormData((prev) => ({ ...prev, date: today }));
   }, []);
 
+  useEffect(() => {
+    if (!formData.date || !formData.time) {
+      setAvailability({});
+      return;
+    }
+
+    let cancelled = false;
+    setAvailabilityError("");
+
+    fetch(`${API_URL}/api/booking/availability?date=${encodeURIComponent(formData.date)}&time=${encodeURIComponent(formData.time)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (data.success) {
+          const map = {};
+          data.data.forEach((entry) => {
+            map[entry.typeId] = entry;
+          });
+          setAvailability(map);
+        } else {
+          setAvailabilityError("Couldn't load table availability.");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setAvailabilityError("Couldn't load table availability.");
+      });
+
+    return () => { cancelled = true; };
+  }, [formData.date, formData.time]);
+
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const isSlotPast = (startHour) => isTodayDate(formData.date) && startHour <= new Date().getHours();
+
+  useEffect(() => {
+    if (!formData.time) return;
+    const slot = TIME_SLOTS.find((s) => s.label === formData.time);
+    if (slot && isSlotPast(slot.startHour)) {
+      setFormData((prev) => ({ ...prev, time: "" }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.date]);
+
+  const handleSelectTable = (table) => {
+    const info = availability[table.id];
+    if (formData.date && formData.time && info && !info.isAvailable) return;
+    setSelectedTable(table);
+  };
+
   const readyToConfirm = selectedTable && formData.date && formData.time && formData.name && formData.phone && formData.email;
 
-  const handleBookingSubmit = (e) => {
+  const handleBookingSubmit = async (e) => {
     e.preventDefault();
     if (!readyToConfirm) return;
 
@@ -46,6 +108,41 @@ function Booking() {
     }
 
     setSubmitting(true);
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_URL}/api/booking`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          tableTypeId: selectedTable.id,
+          date: formData.date,
+          time: formData.time,
+          guests: formData.guests,
+          name: formData.name,
+          phone: formData.phone,
+          email: formData.email,
+          requests: formData.requests
+        })
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        alert(data.message || "That table just got booked. Please pick another.");
+        setSubmitting(false);
+        return;
+      }
+
+      setBookedTableNumber(data.data.tableNumber);
+    } catch (error) {
+      console.error("Booking request failed:", error);
+      alert("Something went wrong while confirming your booking. Please try again.");
+      setSubmitting(false);
+      return;
+    }
 
     const templateParams = {
       to_name: formData.name,
@@ -72,6 +169,7 @@ function Booking() {
   const closeModal = () => {
     setShowModal(false);
     setSelectedTable(null);
+    setBookedTableNumber(null);
     setFormData((prev) => ({ ...prev, time: "", guests: 2, name: "", phone: "", email: "", requests: "" }));
   };
 
@@ -97,7 +195,7 @@ function Booking() {
               <span className="w-8 h-8 bg-yellow-400 text-black rounded-full flex items-center justify-center text-sm font-bold">1</span>
               When are you coming in?
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-2">Date</label>
                 <input
@@ -122,24 +220,30 @@ function Booking() {
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-2">Time</label>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {TIME_SLOTS.map((slot) => (
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-2">Time (7 AM – 11 PM)</label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                {TIME_SLOTS.map((slot) => {
+                  const disabled = isSlotPast(slot.startHour);
+                  return (
                     <button
-                      key={slot}
+                      key={slot.label}
                       type="button"
-                      onClick={() => setFormData((prev) => ({ ...prev, time: slot }))}
+                      disabled={disabled}
+                      onClick={() => setFormData((prev) => ({ ...prev, time: slot.label }))}
                       className={`text-xs font-semibold py-2 rounded-lg transition ${
-                        formData.time === slot
+                        disabled
+                          ? "bg-gray-50 text-gray-300 border border-gray-100 cursor-not-allowed"
+                          : formData.time === slot.label
                           ? "bg-yellow-400 text-black shadow-md"
                           : "bg-gray-50 text-gray-600 hover:bg-yellow-50 border border-gray-200"
                       }`}
                     >
-                      {slot}
+                      {slot.label}
                     </button>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -150,20 +254,41 @@ function Booking() {
               <span className="w-8 h-8 bg-yellow-400 text-black rounded-full flex items-center justify-center text-sm font-bold">2</span>
               Choose your vibe
             </h2>
+            {availabilityError && (
+              <p className="text-sm text-red-500 mb-3">{availabilityError}</p>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {TABLE_TYPES.map((table) => {
                 const isSelected = selectedTable?.id === table.id;
+                const hasSlot = Boolean(formData.date && formData.time);
+                const info = availability[table.id];
+                const isAvailable = !hasSlot || !info || info.isAvailable;
+
                 return (
                   <button
                     key={table.id}
                     type="button"
-                    onClick={() => setSelectedTable(table)}
+                    onClick={() => handleSelectTable(table)}
+                    disabled={hasSlot && !isAvailable}
                     className={`text-left p-5 rounded-2xl border-2 transition-all duration-300 ${
                       isSelected
                         ? "border-yellow-400 bg-gradient-to-br from-yellow-50 to-orange-50 shadow-lg scale-[1.02]"
+                        : hasSlot && !isAvailable
+                        ? "border-gray-100 opacity-60 cursor-not-allowed"
                         : "border-gray-100 hover:border-yellow-200 hover:shadow-md"
                     }`}
                   >
+                    {hasSlot && (
+                      <div className="flex justify-end mb-3">
+                        <span
+                          className={`inline-block text-[11px] font-bold uppercase tracking-wide px-3 py-1 rounded-full ${
+                            isAvailable ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                          }`}
+                        >
+                          {isAvailable ? "Available" : "Fully Booked"}
+                        </span>
+                      </div>
+                    )}
                     <div className="text-4xl mb-3">{table.icon}</div>
                     <p className="font-bold text-gray-800">{table.name}</p>
                     <p className="text-xs font-semibold text-yellow-600 mb-2">{table.vibe}</p>
@@ -215,6 +340,9 @@ function Booking() {
               <p className="text-gray-500 mb-6">We'll send a confirmation to {formData.email} shortly.</p>
               <div className="space-y-2 text-sm text-left bg-gray-50 p-5 rounded-2xl">
                 <div className="flex justify-between"><span className="text-gray-500">Table</span><span className="font-semibold">{selectedTable?.icon} {selectedTable?.name}</span></div>
+                {bookedTableNumber && (
+                  <div className="flex justify-between"><span className="text-gray-500">Table Number</span><span className="font-semibold">#{bookedTableNumber}</span></div>
+                )}
                 <div className="flex justify-between"><span className="text-gray-500">Date</span><span className="font-semibold">{formData.date}</span></div>
                 <div className="flex justify-between"><span className="text-gray-500">Time</span><span className="font-semibold">{formData.time}</span></div>
                 <div className="flex justify-between"><span className="text-gray-500">Party Size</span><span className="font-semibold">{formData.guests} guests</span></div>

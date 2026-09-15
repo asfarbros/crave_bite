@@ -14,6 +14,8 @@ function Navbar() {
   const [cartCount, setCartCount] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [bookingsOpen, setBookingsOpen] = useState(false);
+  const [mobileBookingsOpen, setMobileBookingsOpen] = useState(false);
   const profileRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -33,6 +35,8 @@ function Navbar() {
   useEffect(() => {
     setMenuOpen(false);
     setProfileOpen(false);
+    setBookingsOpen(false);
+    setMobileBookingsOpen(false);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -143,10 +147,29 @@ function Navbar() {
               </button>
 
               {profileOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 overflow-hidden">
-                  <Link to="/myorders" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-yellow-50 transition-colors">
-                    📦 My Orders
-                  </Link>
+                <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-lg border border-gray-100 py-2 overflow-hidden">
+                  <button
+                    onClick={() => setBookingsOpen((prev) => !prev)}
+                    className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-gray-700 hover:bg-yellow-50 transition-colors"
+                  >
+                    <span> My Bookings</span>
+                    <svg className={`w-3 h-3 text-gray-400 transition-transform ${bookingsOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {bookingsOpen && (
+                    <div className="bg-gray-50 py-1">
+                      <Link to="/myorders" className="block pl-8 pr-4 py-2 text-sm text-gray-600 hover:bg-yellow-50 transition-colors">
+                         Orders
+                      </Link>
+                      <Link to="/booked-tables" className="block pl-8 pr-4 py-2 text-sm text-gray-600 hover:bg-yellow-50 transition-colors">
+                         Tables
+                      </Link>
+                      <Link to="/booked-halls" className="block pl-8 pr-4 py-2 text-sm text-gray-600 hover:bg-yellow-50 transition-colors">
+                         Halls
+                      </Link>
+                    </div>
+                  )}
                   <button
                     onClick={handleLogout}
                     className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
@@ -189,9 +212,30 @@ function Navbar() {
           ))}
 
           {user && (
-            <Link to="/myorders" className="block px-3 py-2.5 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50">
-              My Orders
-            </Link>
+            <div>
+              <button
+                onClick={() => setMobileBookingsOpen((prev) => !prev)}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                <span>My Bookings</span>
+                <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform ${mobileBookingsOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {mobileBookingsOpen && (
+                <div className="pl-4 space-y-1 mt-1">
+                  <Link to="/myorders" className="block px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+                    📦 My Orders
+                  </Link>
+                  <Link to="/booked-tables" className="block px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+                    🍽️ Booked Tables
+                  </Link>
+                  <Link to="/booked-halls" className="block px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+                    🎉 Booked Halls
+                  </Link>
+                </div>
+              )}
+            </div>
           )}
 
           <div className="pt-2 mt-2 border-t border-gray-100">
