@@ -1,3 +1,4 @@
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -5,6 +6,9 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
+const startInventoryResetJob =
+    require("./jobs/inventoryReset");
+const offersRoutes = require("./routes/offers");
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
 const paymentRoutes = require('./routes/payment');
@@ -66,6 +70,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
+app.use('/api/offers', offersRoutes);
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/payment', paymentRoutes);
@@ -113,6 +118,8 @@ mongoose.connect(process.env.MONGODB_URI , {
 })
 .then(() => {
   console.log('✅ Connected to MongoDB');
+  startInventoryResetJob();
+
   startServer();
 })
 .catch((err) => {

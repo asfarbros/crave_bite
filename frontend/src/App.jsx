@@ -25,122 +25,217 @@ import Footer from "./components/Footer";
 
 import TasteProfile from "./components/TasteProfile";
 import RestaurantChatbot from "./components/RestaurantChatbot";
+import RestaurantStatus from "./components/RestaurantStatus";
+
+
+const OPEN_TIME = 8 * 60 + 30; // 8:30 AM
+const CLOSE_TIME = 21 * 60;    // 9:00 PM
+
+
+const isRestaurantOpen = () => {
+
+    const indiaTime = new Date().toLocaleString("en-US", {
+        timeZone: "Asia/Kolkata"
+    });
+
+    const now = new Date(indiaTime);
+
+    const currentMinutes =
+        now.getHours() * 60 + now.getMinutes();
+
+    return (
+        currentMinutes >= OPEN_TIME &&
+        currentMinutes < CLOSE_TIME
+    );
+};
+
 
 function App() {
-  const location = useLocation();
-  const isAdminRoute = location.pathname.startsWith("/admin");
 
-  return (
-    <div className="flex flex-col min-h-screen">
+    const location = useLocation();
 
-      {!isAdminRoute && <Navbar />}
+    const isAdminRoute =
+    location.pathname.startsWith("/admin") ||
+    location.pathname === "/admin-login";
 
-      <main className="flex-grow">
+    const [isOpen, setIsOpen] =
+        React.useState(isRestaurantOpen());
 
-        <Routes>
 
-          <Route
-            path="/"
-            element={<Home />}
-          />
+    React.useEffect(() => {
 
-          <Route
-            path="/menu"
-            element={<Menu />}
-          />
+        const checkRestaurantStatus = () => {
+            setIsOpen(isRestaurantOpen());
+        };
 
-          <Route
-            path="/booking"
-            element={<Booking />}
-          />
+        // Check every 30 seconds
+        const interval = setInterval(
+            checkRestaurantStatus,
+            30000
+        );
 
-          <Route
-            path="/cart"
-            element={<Cart />}
-          />
+        return () => clearInterval(interval);
 
-          <Route
-            path="/checkout"
-            element={<Checkout />}
-          />
+    }, []);
 
-          <Route
-            path="/success"
-            element={<Success />}
-          />
 
-          <Route
-            path="/events"
-            element={<Events />}
-          />
+    /*
+     * ADMIN PAGES
+     *
+     * Admin can access the dashboard even
+     * when the restaurant is closed.
+     */
 
-          <Route
-            path="/login"
-            element={<Login />}
-          />
+    if (isAdminRoute) {
 
-          <Route
-            path="/signup"
-            element={<Signup />}
-          />
+        return (
+            <div className="flex flex-col min-h-screen">
 
-          <Route
-            path="/forgot-password"
-            element={<ForgotPassword />}
-          />
+                <Routes>
 
-          <Route
-            path="/reset-password/:token"
-            element={<ResetPassword />}
-          />
+                    <Route
+                        path="/admin-login"
+                        element={<AdminLogin />}
+                    />
 
-          <Route
-            path="/myorders"
-            element={<MyOrders />}
-          />
+                    <Route
+                        path="/admin"
+                        element={<AdminDashboard />}
+                    />
 
-          <Route
-            path="/booked-tables"
-            element={<BookedTables />}
-          />
+                    <Route
+                        path="/admin/available-tables"
+                        element={<AdminAvailableTables />}
+                    />
 
-          <Route
-            path="/booked-halls"
-            element={<BookedHalls />}
-          />
+                    <Route
+                        path="/admin/staff"
+                        element={<AdminStaff />}
+                    />
 
-          <Route
-            path="/admin-login"
-            element={<AdminLogin />}
-          />
+                </Routes>
 
-          <Route
-            path="/admin"
-            element={<AdminDashboard />}
-          />
+            </div>
+        );
+    }
 
-          <Route
-            path="/admin/available-tables"
-            element={<AdminAvailableTables />}
-          />
 
-          <Route
-            path="/admin/staff"
-            element={<AdminStaff />}
-          />
+    /*
+     * CUSTOMER WEBSITE
+     *
+     * If restaurant is closed,
+     * show ONLY the closed board.
+     */
 
-        </Routes>
+    if (!isOpen) {
 
-      </main>
+        return (
+            <div className="flex flex-col min-h-screen">
 
-      {!isAdminRoute && <Footer />}
+                <RestaurantStatus />
 
-      {/* Floating AI features */}
-      {!isAdminRoute && <TasteProfile />}
-      {!isAdminRoute && <RestaurantChatbot />}
+            </div>
+        );
+    }
 
-    </div>
-  );
+
+    /*
+     * CUSTOMER WEBSITE WHEN OPEN
+     */
+
+    return (
+        <div className="flex flex-col min-h-screen">
+
+            <Navbar />
+
+            <main className="flex-grow">
+
+                <Routes>
+
+                    <Route
+                        path="/"
+                        element={<Home />}
+                    />
+
+                    <Route
+                        path="/menu"
+                        element={<Menu />}
+                    />
+
+                    <Route
+                        path="/booking"
+                        element={<Booking />}
+                    />
+
+                    <Route
+                        path="/cart"
+                        element={<Cart />}
+                    />
+
+                    <Route
+                        path="/checkout"
+                        element={<Checkout />}
+                    />
+
+                    <Route
+                        path="/success"
+                        element={<Success />}
+                    />
+
+                    <Route
+                        path="/events"
+                        element={<Events />}
+                    />
+
+                    <Route
+                        path="/login"
+                        element={<Login />}
+                    />
+
+                    <Route
+                        path="/signup"
+                        element={<Signup />}
+                    />
+
+                    <Route
+                        path="/forgot-password"
+                        element={<ForgotPassword />}
+                    />
+
+                    <Route
+                        path="/reset-password/:token"
+                        element={<ResetPassword />}
+                    />
+
+                    <Route
+                        path="/myorders"
+                        element={<MyOrders />}
+                    />
+
+                    <Route
+                        path="/booked-tables"
+                        element={<BookedTables />}
+                    />
+
+                    <Route
+                        path="/booked-halls"
+                        element={<BookedHalls />}
+                    />
+
+                </Routes>
+
+            </main>
+
+            <Footer />
+
+            {/* Floating AI features */}
+
+            <TasteProfile />
+
+            <RestaurantChatbot />
+
+        </div>
+    );
 }
 
 export default App;

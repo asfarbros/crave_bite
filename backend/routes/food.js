@@ -5,30 +5,31 @@ const { protect, authorize } = require('../middleware/auth');
 const cloudinary = require('cloudinary').v2;
 
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// GET all foods
+// =====================================================
+// GET ALL FOODS
+// =====================================================
+
 router.get('/', async (req, res) => {
     try {
-        // Admins can see all, users see only available
-        let query = { isAvailable: true };
+        // Return ALL foods.
+        // The frontend will display unavailable items
+        // instead of hiding them.
+        const foods = await Food.find({}).sort({ createdAt: 1 });
 
-        // If query param 'all' is passed and user is admin (we can check token if provided)
-        if (req.query.all === 'true') {
-            query = {}; // fetch all
-        }
-
-        const foods = await Food.find(query);
         res.status(200).json({
             success: true,
             count: foods.length,
             data: foods
         });
+
     } catch (error) {
         console.error('Error fetching foods:', error);
+
         res.status(500).json({
             success: false,
             message: 'Server Error'
@@ -36,87 +37,231 @@ router.get('/', async (req, res) => {
     }
 });
 
-// POST add a new food item (Admin only)
+
+// =====================================================
+// ADD NEW FOOD - ADMIN ONLY
+// =====================================================
+
 router.post('/', protect, authorize('admin'), async (req, res) => {
     try {
-        const { name, description, price, category, imageBase64 } = req.body;
+        const {
+            name,
+            description,
+            price,
+            category,
+            imageBase64,
+            stockQuantity
+        } = req.body;
 
         if (!name || !price || !category || !imageBase64) {
-            return res.status(400).json({ success: false, message: 'Please provide all required fields including imageBase64' });
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide all required fields including imageBase64'
+            });
         }
 
-        // Upload to cloudinary
-        const uploadResponse = await cloudinary.uploader.upload(imageBase64, {
-            folder: 'cravebite_foods'
-        });
+        // Upload image to Cloudinary
+        const uploadResponse = await cloudinary.uploader.upload(
+            imageBase64,
+            {
+                folder: 'cravebite_foods'
+            }
+        );
+
+        const stock =
+            stockQuantity !== undefined
+                ? Number(stockQuantity)
+                : 10;
+
+        if (!Number.isInteger(stock) || stock < 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Stock quantity must be a non-negative integer.'
+            });
+        }
 
         const newFood = new Food({
             name,
             description,
             price,
             category,
+
             imageUrl: uploadResponse.secure_url,
-            imagePublicId: uploadResponse.public_id
+            imagePublicId: uploadResponse.public_id,
+
+            stockQuantity: stock,
+            isAvailable: stock > 0
         });
 
         await newFood.save();
-        res.status(201).json({ success: true, data: newFood });
+
+        res.status(201).json({
+            success: true,
+            data: newFood
+        });
+
     } catch (error) {
         console.error('Error adding food:', error);
-        res.status(500).json({ success: false, message: 'Server error adding food item' });
+
+        res.status(500).json({
+            success: false,
+            message: 'Server error adding food item'
+        });
     }
 });
 
-// PUT update a food item (Admin only)
+
+// =====================================================
+// UPDATE FOOD - ADMIN ONLY
+// =====================================================
+
 router.put('/:id', protect, authorize('admin'), async (req, res) => {
     try {
         let food = await Food.findById(req.params.id);
+
         if (!food) {
-            return res.status(404).json({ success: false, message: 'Food not found' });
+            return res.status(404).json({
+                success: false,
+                message: 'Food not found'
+            });
         }
 
-        const { name, description, price, category, imageBase64, isAvailable } = req.body;
+        const {
+            name,
+            description,
+            price,
+            category,
+            imageBase64,
+            isAvailable,
+            stockQuantity
+        } = req.body;
 
-        const updateData = { name, description, price, category };
-        if (isAvailable !== undefined) updateData.isAvailable = isAvailable;
+        const updateData = {
+            name,
+            description,
+            price,
+            category
+        };
+
+        // -----------------------------------------
+        // Inventory update
+        // -----------------------------------------
+
+        if (stockQuantity !== undefined) {
+            const stock = Number(stockQuantity);
+
+            if (!Number.isInteger(stock) || stock < 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Stock quantity must be a non-negative integer.'
+                });
+            }
+
+            updateData.stockQuantity = stock;
+
+            // Automatically determine availability
+            updateData.isAvailable = stock > 0;
+        }
+
+        // Only use manually supplied availability
+        // if stockQuantity wasn't changed.
+        if (
+            stockQuantity === undefined &&
+            isAvailable !== undefined
+        ) {
+            updateData.isAvailable = isAvailable;
+        }
+
+        // -----------------------------------------
+        // Image update
+        // -----------------------------------------
 
         if (imageBase64) {
-            // Delete old image
+
             if (food.imagePublicId) {
-                await cloudinary.uploader.destroy(food.imagePublicId);
+                await cloudinary.uploader.destroy(
+                    food.imagePublicId
+                );
             }
-            // Upload new image
-            const uploadResponse = await cloudinary.uploader.upload(imageBase64, { folder: 'cravebite_foods' });
-            updateData.imageUrl = uploadResponse.secure_url;
-            updateData.imagePublicId = uploadResponse.public_id;
+
+            const uploadResponse =
+                await cloudinary.uploader.upload(
+                    imageBase64,
+                    {
+                        folder: 'cravebite_foods'
+                    }
+                );
+
+            updateData.imageUrl =
+                uploadResponse.secure_url;
+
+            updateData.imagePublicId =
+                uploadResponse.public_id;
         }
 
-        food = await Food.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
-        res.status(200).json({ success: true, data: food });
+        food = await Food.findByIdAndUpdate(
+            req.params.id,
+            updateData,
+            {
+                new: true,
+                runValidators: true
+            }
+        );
+
+        res.status(200).json({
+            success: true,
+            data: food
+        });
+
     } catch (error) {
         console.error('Error updating food:', error);
-        res.status(500).json({ success: false, message: 'Server error updating food item' });
+
+        res.status(500).json({
+            success: false,
+            message: 'Server error updating food item'
+        });
     }
 });
 
-// DELETE a food item (Admin only)
+
+// =====================================================
+// DELETE FOOD - ADMIN ONLY
+// =====================================================
+
 router.delete('/:id', protect, authorize('admin'), async (req, res) => {
     try {
+
         const food = await Food.findById(req.params.id);
+
         if (!food) {
-            return res.status(404).json({ success: false, message: 'Food not found' });
+            return res.status(404).json({
+                success: false,
+                message: 'Food not found'
+            });
         }
 
         if (food.imagePublicId) {
-            await cloudinary.uploader.destroy(food.imagePublicId);
+            await cloudinary.uploader.destroy(
+                food.imagePublicId
+            );
         }
 
         await food.deleteOne();
-        res.status(200).json({ success: true, message: 'Food item deleted successfully' });
+
+        res.status(200).json({
+            success: true,
+            message: 'Food item deleted successfully'
+        });
+
     } catch (error) {
         console.error('Error deleting food:', error);
-        res.status(500).json({ success: false, message: 'Server error deleting food item' });
+
+        res.status(500).json({
+            success: false,
+            message: 'Server error deleting food item'
+        });
     }
 });
+
 
 module.exports = router;
