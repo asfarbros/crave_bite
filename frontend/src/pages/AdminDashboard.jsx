@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { API_URL } from "../config";
-import AnalyticsTab from "../components/admin/AnalyticsTab";
+import AnalyticsDashboard from "../components/admin/analytics/AnalyticsDashboard";
 
 const toBase64 = (file) =>
   new Promise((resolve, reject) => {
@@ -301,7 +301,7 @@ function AdminDashboard() {
       </header>
 
       <main className="flex-grow max-w-7xl mx-auto w-full p-6">
-        {tab === "analytics" && <AnalyticsTab token={token} />}
+        {tab === "analytics" && <AnalyticsDashboard token={token} />}
 
         {tab === "menu" && (
           <section>

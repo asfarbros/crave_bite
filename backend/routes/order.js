@@ -4,6 +4,7 @@ const CartItem = require('../models/CartItem');
 const Order = require('../models/Order');
 const Food = require('../models/Food');
 const { protect, authorize } = require('../middleware/auth');
+const { resolvePeriod, bucketKey, buildBuckets, widenBucketForSpan } = require('../utils/period');
 
 // POST /api/order/place - Create an order from the user's cart
 router.post('/place', protect, async (req, res) => {
@@ -57,36 +58,58 @@ router.get('/all', protect, authorize('admin'), async (req, res) => {
   }
 });
 
-// GET /api/order/analytics/summary?month=YYYY-MM - Sales analytics for a month (Admin only)
+// GET /api/order/analytics/summary?range=today|week|month|year|all&anchor=YYYY-MM-DD
+// Sales analytics for a period, with the previous period for comparison (Admin only)
 router.get('/analytics/summary', protect, authorize('admin'), async (req, res) => {
   try {
-    const month = req.query.month || new Date().toISOString().slice(0, 7);
-    const [year, mon] = month.split('-').map(Number);
-    if (!year || !mon) {
-      return res.status(400).json({ success: false, message: 'month must be in YYYY-MM format' });
+    let period = resolvePeriod(req.query.range, req.query.anchor);
+
+    const orders = await Order.find({ createdAt: { $gte: period.start, $lt: period.end } }).sort({ createdAt: 1 });
+
+    const summarize = (list) => {
+      let sales = 0;
+      let units = 0;
+      list.forEach((order) => {
+        order.items.forEach((item) => {
+          sales += (item.price || 0) * (item.quantity || 0);
+          units += item.quantity || 0;
+        });
+      });
+      return {
+        totalSales: Math.round(sales * 100) / 100,
+        orderCount: list.length,
+        itemsSold: units,
+        avgOrderValue: list.length > 0 ? Math.round((sales / list.length) * 100) / 100 : 0
+      };
+    };
+
+    const totals = summarize(orders);
+    const totalSales = totals.totalSales;
+
+    let previous = null;
+    if (period.previous) {
+      const previousOrders = await Order.find({
+        createdAt: { $gte: period.previous.start, $lt: period.previous.end }
+      });
+      previous = { ...summarize(previousOrders), label: period.previous.label };
     }
 
-    const start = new Date(Date.UTC(year, mon - 1, 1));
-    const end = new Date(Date.UTC(year, mon, 1));
+    const first = orders[0]?.createdAt || null;
+    const last = orders[orders.length - 1]?.createdAt || null;
+    period = widenBucketForSpan(period, first, last);
 
-    const orders = await Order.find({ createdAt: { $gte: start, $lt: end } }).sort({ createdAt: 1 });
-
-    let totalSales = 0;
-    let itemsSold = 0;
-    const dailyMap = {};
+    const bucketTotals = {};
     const itemMap = {};
 
     orders.forEach((order) => {
-      const day = order.createdAt.toISOString().split('T')[0];
-      if (!dailyMap[day]) dailyMap[day] = { date: day, total: 0, orders: 0 };
-      dailyMap[day].orders += 1;
+      const key = bucketKey(order.createdAt, period.bucket);
+      if (!bucketTotals[key]) bucketTotals[key] = { total: 0, orders: 0 };
+      bucketTotals[key].orders += 1;
 
       const seenInOrder = new Set();
       order.items.forEach((item) => {
         const lineTotal = (item.price || 0) * (item.quantity || 0);
-        totalSales += lineTotal;
-        itemsSold += item.quantity || 0;
-        dailyMap[day].total += lineTotal;
+        bucketTotals[key].total += lineTotal;
 
         if (!itemMap[item.name]) itemMap[item.name] = { name: item.name, quantity: 0, revenue: 0, orders: 0 };
         itemMap[item.name].quantity += item.quantity || 0;
@@ -98,10 +121,14 @@ router.get('/analytics/summary', protect, authorize('admin'), async (req, res) =
       });
     });
 
-    const daily = Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date));
+    const series = buildBuckets(period, first, last).map((bucket) => ({
+      key: bucket.key,
+      label: bucket.label,
+      total: Math.round((bucketTotals[bucket.key]?.total || 0) * 100) / 100,
+      orders: bucketTotals[bucket.key]?.orders || 0
+    }));
+
     const topItems = Object.values(itemMap).sort((a, b) => b.revenue - a.revenue).slice(0, 8);
-    const orderCount = orders.length;
-    const avgOrderValue = orderCount > 0 ? Math.round((totalSales / orderCount) * 100) / 100 : 0;
 
     // Per-dish breakdown: every dish on the menu, including ones that sold nothing,
     // plus any sold dish that has since been removed from the menu.
@@ -146,7 +173,21 @@ router.get('/analytics/summary', protect, authorize('admin'), async (req, res) =
 
     res.status(200).json({
       success: true,
-      data: { month, totalSales, orderCount, avgOrderValue, itemsSold, daily, topItems, foods }
+      data: {
+        period: {
+          range: period.range,
+          label: period.label,
+          bucket: period.bucket,
+          start: period.start.toISOString(),
+          end: period.end.toISOString(),
+          previousLabel: period.previous?.label || null
+        },
+        totals,
+        previous,
+        series,
+        topItems,
+        foods
+      }
     });
   } catch (error) {
     console.error('Error building sales analytics:', error);

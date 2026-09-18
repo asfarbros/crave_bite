@@ -5,6 +5,7 @@ const Attendance = require('../models/Attendance');
 const Shift = require('../models/Shift');
 const PerformanceNote = require('../models/PerformanceNote');
 const { protect, authorize } = require('../middleware/auth');
+const { resolvePeriod } = require('../utils/period');
 
 const DEFAULT_SHIFT_START = '09:30';
 
@@ -183,38 +184,36 @@ router.get('/analytics/attendance', async (req, res) => {
 });
 
 // GET per-employee rating analytics from performance notes.
-// Ratings are lifetime figures; `month` additionally reports that month's activity.
+// Ratings are reported both lifetime and scoped to the requested period.
 router.get('/analytics/performance', async (req, res) => {
     try {
-        const { month } = req.query;
-
-        let monthStart = null;
-        let monthEnd = null;
-        if (month) {
-            const [year, mon] = month.split('-').map(Number);
-            if (!year || !mon) {
-                return res.status(400).json({ success: false, message: 'month must be in YYYY-MM format' });
-            }
-            monthStart = new Date(Date.UTC(year, mon - 1, 1));
-            monthEnd = new Date(Date.UTC(year, mon, 1));
-        }
+        const period = resolvePeriod(req.query.range, req.query.anchor);
 
         const employees = await Employee.find({ isActive: true }).sort({ name: 1 });
         const notes = await PerformanceNote.find({ employeeId: { $in: employees.map((e) => e._id) } }).sort({ createdAt: -1 });
 
+        const emptyBucket = () => ({
+            notes: [],
+            ratings: [],
+            periodRatings: [],
+            distribution: [0, 0, 0, 0, 0],
+            periodDistribution: [0, 0, 0, 0, 0]
+        });
+
         const byEmployee = {};
         notes.forEach((n) => {
             const key = n.employeeId.toString();
-            if (!byEmployee[key]) byEmployee[key] = { notes: [], ratings: [], monthRatings: [], distribution: [0, 0, 0, 0, 0] };
+            if (!byEmployee[key]) byEmployee[key] = emptyBucket();
             const bucket = byEmployee[key];
             bucket.notes.push(n);
 
-            if (n.rating) {
-                bucket.ratings.push(n.rating);
-                bucket.distribution[n.rating - 1] += 1;
-                if (monthStart && n.createdAt >= monthStart && n.createdAt < monthEnd) {
-                    bucket.monthRatings.push(n.rating);
-                }
+            if (!n.rating) return;
+            bucket.ratings.push(n.rating);
+            bucket.distribution[n.rating - 1] += 1;
+
+            if (n.createdAt >= period.start && n.createdAt < period.end) {
+                bucket.periodRatings.push(n.rating);
+                bucket.periodDistribution[n.rating - 1] += 1;
             }
         });
 
@@ -222,7 +221,7 @@ router.get('/analytics/performance', async (req, res) => {
             values.length > 0 ? Math.round((values.reduce((sum, v) => sum + v, 0) / values.length) * 10) / 10 : null;
 
         const data = employees.map((emp) => {
-            const bucket = byEmployee[emp._id.toString()] || { notes: [], ratings: [], monthRatings: [], distribution: [0, 0, 0, 0, 0] };
+            const bucket = byEmployee[emp._id.toString()] || emptyBucket();
             const latest = bucket.notes[0];
 
             return {
@@ -231,15 +230,20 @@ router.get('/analytics/performance', async (req, res) => {
                 ratingCount: bucket.ratings.length,
                 noteCount: bucket.notes.length,
                 distribution: bucket.distribution,
-                monthAvgRating: average(bucket.monthRatings),
-                monthRatingCount: bucket.monthRatings.length,
+                periodAvgRating: average(bucket.periodRatings),
+                periodRatingCount: bucket.periodRatings.length,
+                periodDistribution: bucket.periodDistribution,
                 latestNote: latest
                     ? { note: latest.note, rating: latest.rating || null, createdBy: latest.createdBy, createdAt: latest.createdAt }
                     : null
             };
         });
 
-        res.status(200).json({ success: true, data });
+        res.status(200).json({
+            success: true,
+            period: { range: period.range, label: period.label },
+            data
+        });
     } catch (error) {
         console.error('Error fetching performance analytics:', error);
         res.status(500).json({ success: false, message: 'Server error fetching performance analytics' });
