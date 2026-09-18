@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const CartItem = require('../models/CartItem');
 const Order = require('../models/Order');
+const Food = require('../models/Food');
 const { protect, authorize } = require('../middleware/auth');
 
 // POST /api/order/place - Create an order from the user's cart
@@ -80,15 +81,20 @@ router.get('/analytics/summary', protect, authorize('admin'), async (req, res) =
       if (!dailyMap[day]) dailyMap[day] = { date: day, total: 0, orders: 0 };
       dailyMap[day].orders += 1;
 
+      const seenInOrder = new Set();
       order.items.forEach((item) => {
         const lineTotal = (item.price || 0) * (item.quantity || 0);
         totalSales += lineTotal;
         itemsSold += item.quantity || 0;
         dailyMap[day].total += lineTotal;
 
-        if (!itemMap[item.name]) itemMap[item.name] = { name: item.name, quantity: 0, revenue: 0 };
+        if (!itemMap[item.name]) itemMap[item.name] = { name: item.name, quantity: 0, revenue: 0, orders: 0 };
         itemMap[item.name].quantity += item.quantity || 0;
         itemMap[item.name].revenue += lineTotal;
+        if (!seenInOrder.has(item.name)) {
+          seenInOrder.add(item.name);
+          itemMap[item.name].orders += 1;
+        }
       });
     });
 
@@ -97,9 +103,50 @@ router.get('/analytics/summary', protect, authorize('admin'), async (req, res) =
     const orderCount = orders.length;
     const avgOrderValue = orderCount > 0 ? Math.round((totalSales / orderCount) * 100) / 100 : 0;
 
+    // Per-dish breakdown: every dish on the menu, including ones that sold nothing,
+    // plus any sold dish that has since been removed from the menu.
+    const share = (revenue) => (totalSales > 0 ? Math.round((revenue / totalSales) * 1000) / 10 : 0);
+    const catalog = await Food.find().sort({ name: 1 });
+    const matchedNames = new Set();
+
+    const foods = catalog.map((food) => {
+      const stats = itemMap[food.name];
+      if (stats) matchedNames.add(food.name);
+      return {
+        name: food.name,
+        category: food.category,
+        imageUrl: food.imageUrl,
+        price: food.price,
+        isAvailable: food.isAvailable,
+        onMenu: true,
+        quantity: stats?.quantity || 0,
+        revenue: stats?.revenue || 0,
+        orders: stats?.orders || 0,
+        revenueShare: share(stats?.revenue || 0)
+      };
+    });
+
+    Object.values(itemMap).forEach((stats) => {
+      if (matchedNames.has(stats.name)) return;
+      foods.push({
+        name: stats.name,
+        category: '',
+        imageUrl: '',
+        price: null,
+        isAvailable: false,
+        onMenu: false,
+        quantity: stats.quantity,
+        revenue: stats.revenue,
+        orders: stats.orders,
+        revenueShare: share(stats.revenue)
+      });
+    });
+
+    foods.sort((a, b) => b.revenue - a.revenue);
+
     res.status(200).json({
       success: true,
-      data: { month, totalSales, orderCount, avgOrderValue, itemsSold, daily, topItems }
+      data: { month, totalSales, orderCount, avgOrderValue, itemsSold, daily, topItems, foods }
     });
   } catch (error) {
     console.error('Error building sales analytics:', error);

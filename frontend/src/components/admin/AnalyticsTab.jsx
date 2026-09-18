@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { API_URL } from "../../config";
+import FoodPerformance from "./FoodPerformance";
+import EmployeeRatings from "./EmployeeRatings";
 
 const CHART_W = 800;
 const CHART_H = 220;
@@ -194,7 +196,7 @@ function TopItemsBarChart({ items }) {
   );
 }
 
-function SalesAnalytics({ token }) {
+function AnalyticsTab({ token }) {
   const [month, setMonth] = useState(currentMonth());
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -230,8 +232,8 @@ function SalesAnalytics({ token }) {
     <section>
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Sales Analytics</h2>
-          <p className="text-gray-500 text-sm">Revenue and order trends for {monthLabel || "this month"}.</p>
+          <h2 className="text-2xl font-bold text-gray-800">Analytics</h2>
+          <p className="text-gray-500 text-sm">Sales, menu and team performance for {monthLabel || "this month"}.</p>
         </div>
         <input
           type="month"
@@ -265,10 +267,13 @@ function SalesAnalytics({ token }) {
               <TopItemsBarChart items={data.topItems} />
             </div>
           </div>
+
+          <FoodPerformance foods={data.foods || []} />
+          <EmployeeRatings token={token} month={month} />
         </>
       ) : null}
     </section>
   );
 }
 
-export default SalesAnalytics;
+export default AnalyticsTab;
