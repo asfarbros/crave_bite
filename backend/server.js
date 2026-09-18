@@ -17,6 +17,11 @@ const tasteProfileRoutes = require('./routes/tasteProfile');
 const bookingRoutes = require('./routes/booking');
 const hallBookingRoutes = require('./routes/hallBooking');
 const staffRoutes = require('./routes/staff');
+const staffShiftsRoutes = require('./routes/staffShifts');
+const staffLeaveRoutes = require('./routes/staffLeave');
+const staffPerformanceRoutes = require('./routes/staffPerformance');
+const staffPayrollRoutes = require('./routes/staffPayroll');
+const staffDocumentsRoutes = require('./routes/staffDocuments');
 const { protect } = require('./middleware/auth');
 
 const app = express();
@@ -77,6 +82,13 @@ app.use('/api/recommendations', recommendationsRoutes);
 app.use('/api/taste-profile', tasteProfileRoutes);
 app.use('/api/booking', bookingRoutes);
 app.use('/api/hall-booking', hallBookingRoutes);
+// Mount specific staff sub-routers before the general staff router so a
+// path like /api/staff/shifts is never accidentally matched by staff.js's /:id routes.
+app.use('/api/staff/shifts', staffShiftsRoutes);
+app.use('/api/staff/leave', staffLeaveRoutes);
+app.use('/api/staff/performance', staffPerformanceRoutes);
+app.use('/api/staff/payroll', staffPayrollRoutes);
+app.use('/api/staff/documents', staffDocumentsRoutes);
 app.use('/api/staff', staffRoutes);
 
 

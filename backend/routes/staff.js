@@ -2,9 +2,16 @@ const express = require('express');
 const router = express.Router();
 const Employee = require('../models/Employee');
 const Attendance = require('../models/Attendance');
+const Shift = require('../models/Shift');
+const PerformanceNote = require('../models/PerformanceNote');
 const { protect, authorize } = require('../middleware/auth');
+const { resolvePeriod } = require('../utils/period');
 
-router.use(protect, authorize('admin'));
+const DEFAULT_SHIFT_START = '09:30';
+
+// Admins and managers can view/manage day-to-day staff data.
+// Some destructive/sensitive routes below add an extra authorize('admin') check.
+router.use(protect, authorize('admin', 'manager'));
 
 // GET all employees
 router.get('/', async (req, res) => {
@@ -61,8 +68,8 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-// DELETE an employee
-router.delete('/:id', async (req, res) => {
+// DELETE an employee (admin only)
+router.delete('/:id', authorize('admin'), async (req, res) => {
     try {
         const employee = await Employee.findById(req.params.id);
         if (!employee) {
@@ -92,11 +99,16 @@ router.get('/attendance', async (req, res) => {
             recordMap[r.employeeId.toString()] = r;
         });
 
-        const data = employees.map((emp) => ({
-            employee: emp,
-            status: recordMap[emp._id.toString()]?.status || null,
-            notes: recordMap[emp._id.toString()]?.notes || ''
-        }));
+        const data = employees.map((emp) => {
+            const record = recordMap[emp._id.toString()];
+            return {
+                employee: emp,
+                status: record?.status || null,
+                notes: record?.notes || '',
+                checkInTime: record?.checkInTime || '',
+                late: record?.late || false
+            };
+        });
 
         res.status(200).json({ success: true, data });
     } catch (error) {
@@ -108,7 +120,7 @@ router.get('/attendance', async (req, res) => {
 // POST mark attendance for an employee on a given date (upsert)
 router.post('/attendance', async (req, res) => {
     try {
-        const { employeeId, date, status, notes } = req.body;
+        const { employeeId, date, status, notes, checkInTime } = req.body;
 
         if (!employeeId || !date || !status) {
             return res.status(400).json({ success: false, message: 'employeeId, date and status are required' });
@@ -118,9 +130,16 @@ router.post('/attendance', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid status' });
         }
 
+        let late = false;
+        if (status === 'present' && checkInTime) {
+            const shift = await Shift.findOne({ employeeId, date });
+            const shiftStart = shift?.startTime || DEFAULT_SHIFT_START;
+            late = checkInTime > shiftStart;
+        }
+
         const record = await Attendance.findOneAndUpdate(
             { employeeId, date },
-            { status, notes: notes || '' },
+            { status, notes: notes || '', checkInTime: checkInTime || '', late },
             { new: true, upsert: true, runValidators: true }
         );
 
@@ -128,6 +147,106 @@ router.post('/attendance', async (req, res) => {
     } catch (error) {
         console.error('Error marking attendance:', error);
         res.status(500).json({ success: false, message: 'Server error marking attendance' });
+    }
+});
+
+// GET monthly attendance analytics per employee (attendance %, late count)
+router.get('/analytics/attendance', async (req, res) => {
+    try {
+        const { month } = req.query; // format: YYYY-MM
+        if (!month) {
+            return res.status(400).json({ success: false, message: 'month (YYYY-MM) is required' });
+        }
+
+        const employees = await Employee.find({ isActive: true }).sort({ name: 1 });
+        const records = await Attendance.find({ date: { $regex: `^${month}` } });
+
+        const byEmployee = {};
+        records.forEach((r) => {
+            const key = r.employeeId.toString();
+            if (!byEmployee[key]) byEmployee[key] = { present: 0, absent: 0, leave: 0, late: 0, marked: 0 };
+            byEmployee[key][r.status] += 1;
+            byEmployee[key].marked += 1;
+            if (r.late) byEmployee[key].late += 1;
+        });
+
+        const data = employees.map((emp) => {
+            const stats = byEmployee[emp._id.toString()] || { present: 0, absent: 0, leave: 0, late: 0, marked: 0 };
+            const attendancePercent = stats.marked > 0 ? Math.round((stats.present / stats.marked) * 1000) / 10 : 0;
+            return { employee: emp, ...stats, attendancePercent };
+        });
+
+        res.status(200).json({ success: true, data });
+    } catch (error) {
+        console.error('Error fetching attendance analytics:', error);
+        res.status(500).json({ success: false, message: 'Server error fetching attendance analytics' });
+    }
+});
+
+// GET per-employee rating analytics from performance notes.
+// Ratings are reported both lifetime and scoped to the requested period.
+router.get('/analytics/performance', async (req, res) => {
+    try {
+        const period = resolvePeriod(req.query.range, req.query.anchor);
+
+        const employees = await Employee.find({ isActive: true }).sort({ name: 1 });
+        const notes = await PerformanceNote.find({ employeeId: { $in: employees.map((e) => e._id) } }).sort({ createdAt: -1 });
+
+        const emptyBucket = () => ({
+            notes: [],
+            ratings: [],
+            periodRatings: [],
+            distribution: [0, 0, 0, 0, 0],
+            periodDistribution: [0, 0, 0, 0, 0]
+        });
+
+        const byEmployee = {};
+        notes.forEach((n) => {
+            const key = n.employeeId.toString();
+            if (!byEmployee[key]) byEmployee[key] = emptyBucket();
+            const bucket = byEmployee[key];
+            bucket.notes.push(n);
+
+            if (!n.rating) return;
+            bucket.ratings.push(n.rating);
+            bucket.distribution[n.rating - 1] += 1;
+
+            if (n.createdAt >= period.start && n.createdAt < period.end) {
+                bucket.periodRatings.push(n.rating);
+                bucket.periodDistribution[n.rating - 1] += 1;
+            }
+        });
+
+        const average = (values) =>
+            values.length > 0 ? Math.round((values.reduce((sum, v) => sum + v, 0) / values.length) * 10) / 10 : null;
+
+        const data = employees.map((emp) => {
+            const bucket = byEmployee[emp._id.toString()] || emptyBucket();
+            const latest = bucket.notes[0];
+
+            return {
+                employee: emp,
+                avgRating: average(bucket.ratings),
+                ratingCount: bucket.ratings.length,
+                noteCount: bucket.notes.length,
+                distribution: bucket.distribution,
+                periodAvgRating: average(bucket.periodRatings),
+                periodRatingCount: bucket.periodRatings.length,
+                periodDistribution: bucket.periodDistribution,
+                latestNote: latest
+                    ? { note: latest.note, rating: latest.rating || null, createdBy: latest.createdBy, createdAt: latest.createdAt }
+                    : null
+            };
+        });
+
+        res.status(200).json({
+            success: true,
+            period: { range: period.range, label: period.label },
+            data
+        });
+    } catch (error) {
+        console.error('Error fetching performance analytics:', error);
+        res.status(500).json({ success: false, message: 'Server error fetching performance analytics' });
     }
 });
 
