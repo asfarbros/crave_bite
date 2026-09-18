@@ -56,4 +56,55 @@ router.get('/all', protect, authorize('admin'), async (req, res) => {
   }
 });
 
+// GET /api/order/analytics/summary?month=YYYY-MM - Sales analytics for a month (Admin only)
+router.get('/analytics/summary', protect, authorize('admin'), async (req, res) => {
+  try {
+    const month = req.query.month || new Date().toISOString().slice(0, 7);
+    const [year, mon] = month.split('-').map(Number);
+    if (!year || !mon) {
+      return res.status(400).json({ success: false, message: 'month must be in YYYY-MM format' });
+    }
+
+    const start = new Date(Date.UTC(year, mon - 1, 1));
+    const end = new Date(Date.UTC(year, mon, 1));
+
+    const orders = await Order.find({ createdAt: { $gte: start, $lt: end } }).sort({ createdAt: 1 });
+
+    let totalSales = 0;
+    let itemsSold = 0;
+    const dailyMap = {};
+    const itemMap = {};
+
+    orders.forEach((order) => {
+      const day = order.createdAt.toISOString().split('T')[0];
+      if (!dailyMap[day]) dailyMap[day] = { date: day, total: 0, orders: 0 };
+      dailyMap[day].orders += 1;
+
+      order.items.forEach((item) => {
+        const lineTotal = (item.price || 0) * (item.quantity || 0);
+        totalSales += lineTotal;
+        itemsSold += item.quantity || 0;
+        dailyMap[day].total += lineTotal;
+
+        if (!itemMap[item.name]) itemMap[item.name] = { name: item.name, quantity: 0, revenue: 0 };
+        itemMap[item.name].quantity += item.quantity || 0;
+        itemMap[item.name].revenue += lineTotal;
+      });
+    });
+
+    const daily = Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date));
+    const topItems = Object.values(itemMap).sort((a, b) => b.revenue - a.revenue).slice(0, 8);
+    const orderCount = orders.length;
+    const avgOrderValue = orderCount > 0 ? Math.round((totalSales / orderCount) * 100) / 100 : 0;
+
+    res.status(200).json({
+      success: true,
+      data: { month, totalSales, orderCount, avgOrderValue, itemsSold, daily, topItems }
+    });
+  } catch (error) {
+    console.error('Error building sales analytics:', error);
+    res.status(500).json({ success: false, message: 'Server error building sales analytics' });
+  }
+});
+
 module.exports = router;

@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const attendanceSchema = new mongoose.Schema({
+const shiftSchema = new mongoose.Schema({
     employeeId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Employee',
@@ -11,29 +11,30 @@ const attendanceSchema = new mongoose.Schema({
         required: [true, 'Date is required'],
         trim: true
     },
-    status: {
+    label: {
         type: String,
-        enum: ['present', 'absent', 'leave'],
-        required: true
+        trim: true,
+        default: ''
+    },
+    startTime: {
+        type: String,
+        required: [true, 'Start time is required'],
+        trim: true
+    },
+    endTime: {
+        type: String,
+        required: [true, 'End time is required'],
+        trim: true
     },
     notes: {
         type: String,
         trim: true,
         default: ''
-    },
-    checkInTime: {
-        type: String,
-        trim: true,
-        default: ''
-    },
-    late: {
-        type: Boolean,
-        default: false
     }
 }, {
     timestamps: true
 });
 
-attendanceSchema.index({ employeeId: 1, date: 1 }, { unique: true });
+shiftSchema.index({ employeeId: 1, date: 1 }, { unique: true });
 
-module.exports = mongoose.model('Attendance', attendanceSchema);
+module.exports = mongoose.model('Shift', shiftSchema);

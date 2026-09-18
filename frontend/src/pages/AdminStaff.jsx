@@ -1,24 +1,34 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { API_URL } from "../config";
+import AttendanceTab from "../components/staff/AttendanceTab";
+import ShiftsTab from "../components/staff/ShiftsTab";
+import LeaveTab from "../components/staff/LeaveTab";
+import PayrollTab from "../components/staff/PayrollTab";
+import PerformanceTab from "../components/staff/PerformanceTab";
+import DocumentsTab from "../components/staff/DocumentsTab";
+import AnalyticsTab from "../components/staff/AnalyticsTab";
 
-const EMPTY_FORM = { name: "", role: "", phone: "", email: "", avatar: "🧑" };
+const EMPTY_FORM = { name: "", role: "", phone: "", email: "", avatar: "🧑", salaryType: "monthly", baseSalary: "" };
 
-const STATUS_STYLES = {
-  present: "bg-green-100 text-green-700",
-  absent: "bg-red-100 text-red-700",
-  leave: "bg-yellow-100 text-yellow-700"
-};
+const TABS = [
+  { key: "attendance", label: "Attendance" },
+  { key: "shifts", label: "Shifts" },
+  { key: "leave", label: "Leave" },
+  { key: "payroll", label: "Payroll" },
+  { key: "performance", label: "Performance" },
+  { key: "documents", label: "Documents" },
+  { key: "analytics", label: "Analytics" }
+];
 
 function AdminStaff() {
   const navigate = useNavigate();
   const [token, setToken] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [activeTab, setActiveTab] = useState("attendance");
 
-  const [attendance, setAttendance] = useState([]);
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [markingId, setMarkingId] = useState(null);
+  const [employees, setEmployees] = useState([]);
+  const [employeesLoading, setEmployeesLoading] = useState(false);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [formData, setFormData] = useState(EMPTY_FORM);
@@ -34,64 +44,32 @@ function AdminStaff() {
 
     try {
       const user = userStr ? JSON.parse(userStr) : null;
-      if (!storedToken || !user || user.role !== "admin") {
+      if (!storedToken || !user || !["admin", "manager"].includes(user.role)) {
         navigate("/");
         return;
       }
       setToken(storedToken);
+      setIsAdmin(user.role === "admin");
     } catch {
       navigate("/");
     }
   }, [navigate]);
 
-  const loadAttendance = useCallback(() => {
-    if (!token || !date) return;
-    setLoading(true);
-    setError("");
-    fetch(`${API_URL}/api/staff/attendance?date=${encodeURIComponent(date)}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+  const loadEmployees = useCallback(() => {
+    if (!token) return;
+    setEmployeesLoading(true);
+    fetch(`${API_URL}/api/staff`, { headers: { Authorization: `Bearer ${token}` } })
       .then((res) => res.json())
       .then((data) => {
-        if (data.success) {
-          setAttendance(data.data);
-        } else {
-          setError(data.message || "Failed to load staff attendance.");
-        }
+        if (data.success) setEmployees(data.data);
       })
-      .catch(() => setError("Network error fetching attendance."))
-      .finally(() => setLoading(false));
-  }, [token, date]);
+      .catch((err) => console.error("Error loading employees:", err))
+      .finally(() => setEmployeesLoading(false));
+  }, [token]);
 
   useEffect(() => {
-    loadAttendance();
-  }, [loadAttendance]);
-
-  const markAttendance = async (employeeId, status) => {
-    setMarkingId(employeeId);
-    try {
-      const res = await fetch(`${API_URL}/api/staff/attendance`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ employeeId, date, status })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setAttendance((prev) =>
-          prev.map((row) =>
-            row.employee._id === employeeId ? { ...row, status: data.data.status } : row
-          )
-        );
-      }
-    } catch (err) {
-      console.error("Error marking attendance:", err);
-    } finally {
-      setMarkingId(null);
-    }
-  };
+    loadEmployees();
+  }, [loadEmployees]);
 
   const openAddModal = () => {
     setFormData(EMPTY_FORM);
@@ -115,12 +93,15 @@ function AdminStaff() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          ...formData,
+          baseSalary: formData.baseSalary ? Number(formData.baseSalary) : 0
+        })
       });
       const data = await res.json();
       if (data.success) {
         setModalOpen(false);
-        loadAttendance();
+        loadEmployees();
       } else {
         setFormError(data.message || "Error adding employee");
       }
@@ -146,7 +127,7 @@ function AdminStaff() {
       });
       if (res.ok) {
         setDeactivateId(null);
-        loadAttendance();
+        loadEmployees();
       }
     } catch (err) {
       console.error("Deactivate failed:", err);
@@ -158,11 +139,6 @@ function AdminStaff() {
   if (!token) {
     return null;
   }
-
-  const presentCount = attendance.filter((r) => r.status === "present").length;
-  const absentCount = attendance.filter((r) => r.status === "absent").length;
-  const leaveCount = attendance.filter((r) => r.status === "leave").length;
-  const unmarkedCount = attendance.filter((r) => !r.status).length;
 
   return (
     <div className="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
@@ -181,60 +157,65 @@ function AdminStaff() {
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-800">Staff Management</h2>
-            <p className="text-gray-500 text-sm">Mark daily attendance and manage your team.</p>
+            <p className="text-gray-500 text-sm">Attendance, shifts, leave, payroll and more for your team.</p>
           </div>
-          <button
-            onClick={openAddModal}
-            className="bg-yellow-400 hover:bg-yellow-500 text-black px-4 py-2 rounded-lg font-bold shadow transition-transform hover:scale-105"
-          >
-            + Add Employee
-          </button>
+          {isAdmin && (
+            <button
+              onClick={openAddModal}
+              className="bg-yellow-400 hover:bg-yellow-500 text-black px-4 py-2 rounded-lg font-bold shadow transition-transform hover:scale-105"
+            >
+              + Add Employee
+            </button>
+          )}
         </div>
 
-        <div className="bg-white rounded-xl shadow p-6 mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-600 mb-2">Date</label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              max={new Date().toISOString().split("T")[0]}
-              className="px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-gray-50"
-            />
-          </div>
-          <div className="flex flex-wrap gap-3 text-sm">
-            <span className="bg-green-50 text-green-700 font-semibold px-3 py-1.5 rounded-full">Present: {presentCount}</span>
-            <span className="bg-red-50 text-red-700 font-semibold px-3 py-1.5 rounded-full">Absent: {absentCount}</span>
-            <span className="bg-yellow-50 text-yellow-700 font-semibold px-3 py-1.5 rounded-full">On Leave: {leaveCount}</span>
-            <span className="bg-gray-100 text-gray-600 font-semibold px-3 py-1.5 rounded-full">Unmarked: {unmarkedCount}</span>
-          </div>
+        <div className="mb-6 border-b border-gray-200 flex flex-wrap gap-1">
+          {TABS.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`px-4 py-2.5 text-sm font-semibold rounded-t-lg transition ${
+                activeTab === tab.key
+                  ? "bg-white text-yellow-600 border border-b-0 border-gray-200"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
-        {error && <p className="text-red-500 mb-4">{error}</p>}
+        {employeesLoading && employees.length === 0 ? (
+          <p className="text-gray-500">Loading staff...</p>
+        ) : (
+          <>
+            {activeTab === "attendance" && <AttendanceTab token={token} />}
+            {activeTab === "shifts" && <ShiftsTab token={token} employees={employees} />}
+            {activeTab === "leave" && <LeaveTab token={token} employees={employees} isAdmin={isAdmin} />}
+            {activeTab === "payroll" && <PayrollTab token={token} employees={employees} isAdmin={isAdmin} />}
+            {activeTab === "performance" && <PerformanceTab token={token} employees={employees} isAdmin={isAdmin} />}
+            {activeTab === "documents" && <DocumentsTab token={token} employees={employees} isAdmin={isAdmin} />}
+            {activeTab === "analytics" && <AnalyticsTab token={token} />}
+          </>
+        )}
 
-        <div className="bg-white rounded-xl shadow overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Mark Attendance</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {loading ? (
+        {isAdmin && employees.length > 0 && (
+          <div className="mt-8 bg-white rounded-xl shadow overflow-x-auto">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h3 className="font-bold text-gray-800">All Employees</h3>
+            </div>
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
                 <tr>
-                  <td colSpan="6" className="px-6 py-8 text-center text-gray-500">Loading...</td>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salary</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
-              ) : attendance.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="px-6 py-8 text-center text-gray-500">No employees found. Add one to get started.</td>
-                </tr>
-              ) : (
-                attendance.map(({ employee, status }) => (
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {employees.map((employee) => (
                   <tr key={employee._id}>
                     <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
                       {employee.avatar} {employee.name}
@@ -244,33 +225,8 @@ function AdminStaff() {
                       <div>{employee.phone}</div>
                       <div className="text-xs text-gray-400">{employee.email}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${status ? STATUS_STYLES[status] : "bg-gray-100 text-gray-500"}`}>
-                        {status ? status.charAt(0).toUpperCase() + status.slice(1) : "Not marked"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right space-x-2">
-                      <button
-                        onClick={() => markAttendance(employee._id, "present")}
-                        disabled={markingId === employee._id}
-                        className={`text-xs font-bold px-3 py-1.5 rounded-full transition ${status === "present" ? "bg-green-500 text-white" : "bg-green-50 text-green-700 hover:bg-green-100"}`}
-                      >
-                        Present
-                      </button>
-                      <button
-                        onClick={() => markAttendance(employee._id, "absent")}
-                        disabled={markingId === employee._id}
-                        className={`text-xs font-bold px-3 py-1.5 rounded-full transition ${status === "absent" ? "bg-red-500 text-white" : "bg-red-50 text-red-700 hover:bg-red-100"}`}
-                      >
-                        Absent
-                      </button>
-                      <button
-                        onClick={() => markAttendance(employee._id, "leave")}
-                        disabled={markingId === employee._id}
-                        className={`text-xs font-bold px-3 py-1.5 rounded-full transition ${status === "leave" ? "bg-yellow-500 text-white" : "bg-yellow-50 text-yellow-700 hover:bg-yellow-100"}`}
-                      >
-                        Leave
-                      </button>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      ₹{employee.baseSalary || 0} / {employee.salaryType}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button onClick={() => setDeactivateId(employee._id)} className="text-red-600 hover:text-red-900">
@@ -278,16 +234,16 @@ function AdminStaff() {
                       </button>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </main>
 
       {modalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-          <div className="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl relative">
+          <div className="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <button onClick={() => setModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl">
               &times;
             </button>
@@ -352,6 +308,33 @@ function AdminStaff() {
                   onChange={handleFormChange}
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-yellow-400 outline-none"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Salary Type</label>
+                  <select
+                    name="salaryType"
+                    value={formData.salaryType}
+                    onChange={handleFormChange}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-yellow-400 outline-none"
+                  >
+                    <option value="monthly">Monthly</option>
+                    <option value="daily">Daily</option>
+                    <option value="hourly">Hourly</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Base Salary</label>
+                  <input
+                    name="baseSalary"
+                    type="number"
+                    min="0"
+                    value={formData.baseSalary}
+                    onChange={handleFormChange}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-yellow-400 outline-none"
+                  />
+                </div>
               </div>
 
               {formError && <div className="text-red-500 text-sm">{formError}</div>}

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { API_URL } from "../config";
+import SalesAnalytics from "../components/admin/SalesAnalytics";
 
 const toBase64 = (file) =>
   new Promise((resolve, reject) => {
@@ -248,6 +249,12 @@ function AdminDashboard() {
           </h1>
           <nav className="flex items-center space-x-6 text-gray-700 font-medium">
             <button
+              onClick={() => setTab("analytics")}
+              className={tab === "analytics" ? "text-yellow-600 font-bold transition-colors" : "hover:text-yellow-500 transition-colors"}
+            >
+              Analytics
+            </button>
+            <button
               onClick={() => setTab("menu")}
               className={tab === "menu" ? "text-yellow-600 font-bold transition-colors" : "hover:text-yellow-500 transition-colors"}
             >
@@ -294,6 +301,8 @@ function AdminDashboard() {
       </header>
 
       <main className="flex-grow max-w-7xl mx-auto w-full p-6">
+        {tab === "analytics" && <SalesAnalytics token={token} />}
+
         {tab === "menu" && (
           <section>
             <div className="flex justify-between items-center mb-6">
